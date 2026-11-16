@@ -22,7 +22,7 @@ public static class DatasetsApi
             .WithSummary("Які реєстри імпортуються і наскільки свіжі файли на порталі");
     }
 
-    private static async Task<List<DatasetStatus>> List(RegistryDb db, CancellationToken ct)
+    public static async Task<List<DatasetStatus>> List(RegistryDb db, CancellationToken ct)
     {
         var states = await db.DatasetStates.AsNoTracking().ToListAsync(ct);
         var snapshotCounts = await db.Snapshots.AsNoTracking()

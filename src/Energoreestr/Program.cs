@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Energoreestr.Api;
 using Energoreestr.Data;
+using Energoreestr.Export;
 using Energoreestr.Import;
 using Energoreestr.Report;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +44,7 @@ using (var scope = app.Services.CreateScope())
     // dotnet run -- import                  забрати свіжі файли з порталу
     // dotnet run -- import <набір> <файл>   імпортувати файл з диска
     // dotnet run -- report [куди]           зібрати звіт про якість даних
+    // dotnet run -- export [папка]         зібрати дані для сторінки пошуку
     if (args is ["import", ..])
     {
         var importer = scope.ServiceProvider.GetRequiredService<Importer>();
@@ -53,6 +55,13 @@ using (var scope = app.Services.CreateScope())
         string path = args.Length > 1 ? args[1] : "quality-report.md";
         await File.WriteAllTextAsync(path, await QualityReport.BuildAsync(db));
         Console.WriteLine($"Звіт записано в {path}");
+        return 0;
+    }
+    if (args is ["export", ..])
+    {
+        string dir = args.Length > 1 ? args[1] : "site";
+        var summary = await SiteExport.WriteAsync(db, dir);
+        Console.WriteLine($"{summary.Companies} компаній записано в {Path.Combine(dir, SiteExport.FileName)}");
         return 0;
     }
 }

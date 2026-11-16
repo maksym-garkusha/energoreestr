@@ -31,7 +31,7 @@ public static class QualityApi
             .WithSummary("Чи проходить EIC-код перевірку контрольного символу");
     }
 
-    private static async Task<List<DatasetQuality>> Summary(RegistryDb db, CancellationToken ct)
+    public static async Task<List<DatasetQuality>> Summary(RegistryDb db, CancellationToken ct)
     {
         var counts = await db.Issues.AsNoTracking()
             .GroupBy(i => new { i.Dataset, i.Code })
