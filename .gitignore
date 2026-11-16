@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 *.db-shm
 *.db-wal
 /quality-report.md
+
+# дані для сторінки пошуку збираються командою export
+site/data.json

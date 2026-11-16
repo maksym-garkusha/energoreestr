@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>energoreestr: компанія в реєстрах НКРЕКП за кодом ЄДРПОУ</title>
+<meta name="description" content="Пошук компанії одразу в трьох відкритих реєстрах НКРЕКП: учасники оптового енергетичного ринку та природні монополії. Незалежний проєкт на відкритих даних.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%2314201c'/%3E%3Crect x='5' y='12' width='6' height='8' fill='%23f2b705'/%3E%3Crect x='13' y='12' width='6' height='8' fill='%23fff'/%3E%3Crect x='21' y='12' width='6' height='8' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f3f5f4;
+  --card: #ffffff;
+  --ink: #14201c;
+  --muted: #5e6b66;
+  --line: #d5dbd8;
+  --amber: #f2b705;
+  --amber-soft: #fdf3cf;
+  --blue: #1f4fd8;
+  --off: #c9d0cc;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 17px/1.5 "Golos Text", system-ui, sans-serif;
+}
+a { color: var(--blue); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .92em; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+
+header.top { display: flex; justify-content: space-between; align-items: baseline; padding: 22px 0 0; }
+.mark { font-weight: 700; letter-spacing: -.01em; }
+.mark i { font-style: normal; color: var(--muted); font-weight: 400; }
+
+h1 { font-size: clamp(30px, 5.2vw, 46px); line-height: 1.1; letter-spacing: -.025em; font-weight: 700; margin: 56px 0 14px; max-width: 17em; }
+.lead { color: var(--muted); max-width: 36em; margin: 0 0 28px; }
+
+.search { position: relative; }
+.search input {
+  width: 100%;
+  font: inherit;
+  font-size: 20px;
+  padding: 18px 20px;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+}
+.search input::placeholder { color: #8b9692; }
+.examples { margin: 12px 0 0; color: var(--muted); font-size: 15px; }
+.examples button {
+  font: inherit; color: var(--blue); background: none; border: 0; padding: 0 2px;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 34px 0 10px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.dot { width: 11px; height: 11px; border-radius: 2px; background: var(--off); flex: none; }
+.dot.on { background: var(--ink); }
+
+#status { margin: 18px 0 8px; color: var(--muted); font-size: 15px; min-height: 1.5em; }
+
+.result { background: var(--card); border: 1px solid var(--line); border-radius: 4px; margin: 0 0 8px; }
+.result summary { list-style: none; cursor: pointer; padding: 14px 18px; display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; }
+.result summary::-webkit-details-marker { display: none; }
+.presence { display: flex; gap: 3px; }
+.result .name { font-weight: 500; line-height: 1.3; }
+.result .id { color: var(--muted); white-space: nowrap; }
+.result[open] { border-color: var(--ink); }
+.result[open] summary { border-bottom: 1px solid var(--line); }
+.body { padding: 6px 18px 18px; }
+.reg { display: grid; grid-template-columns: 190px 1fr; gap: 6px 18px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.reg:last-of-type { border-bottom: 0; }
+.reg h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.reg .none { color: var(--muted); }
+.reg dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; font-size: 15.5px; }
+.reg dt { color: var(--muted); }
+.reg dd { margin: 0; overflow-wrap: anywhere; }
+.reg .rec + .rec { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.flags { background: var(--amber-soft); border-left: 4px solid var(--amber); padding: 12px 16px; margin-top: 14px; font-size: 15.5px; }
+.flags p { margin: 0 0 6px; font-weight: 600; }
+.flags ul { margin: 0; padding-left: 18px; }
+.checksum-bad { background: var(--amber-soft); padding: 1px 6px; border-radius: 3px; }
+
+section.block { margin: 72px 0 0; }
+h2 { font-size: 26px; letter-spacing: -.015em; margin: 0 0 8px; }
+section.block > p { color: var(--muted); max-width: 40em; margin: 0 0 20px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; background: var(--card); border: 1px solid var(--line); font-size: 15.5px; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; font-size: 14px; color: var(--muted); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+.late { background: var(--amber-soft); padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+
+.issues { display: grid; gap: 22px; }
+.issues h3 { font-size: 16px; margin: 0 0 8px; }
+.bar { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15.5px; }
+.bar b { text-align: right; font-variant-numeric: tabular-nums; }
+
+footer { margin: 80px 0 0; padding: 26px 0 60px; border-top: 2px solid var(--ink); color: var(--muted); font-size: 15px; }
+footer p { margin: 0 0 8px; max-width: 46em; }
+
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  .mark i { display: none; }
+  h1 { margin-top: 40px; }
+  .result summary { grid-template-columns: auto 1fr; }
+  .result .id { grid-column: 2; }
+  .reg { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="mark">energoreestr <i>/ відкриті реєстри НКРЕКП</i></div>
+  <a href="https://github.com/maksym-garkusha/energoreestr">Код на GitHub</a>
+</header>
+
+<main>
+  <h1>Що відомо про компанію в реєстрах енергетичного регулятора</h1>
+  <p class="lead">НКРЕКП публікує реєстри окремими файлами. Тут три з них зведено за кодом ЄДРПОУ, тож компанію видно одразу в усіх.</p>
+
+  <div class="search">
+    <label for="q" hidden>Пошук</label>
+    <input id="q" type="search" placeholder="Код ЄДРПОУ, назва або EIC" autocomplete="off" spellcheck="false" disabled>
+  </div>
+  <p class="examples">Наприклад:
+    <button type="button" data-q="укренерго">укренерго</button>,
+    <button type="button" data-q="03346331">03346331</button>,
+    <button type="button" data-q="водоканал">водоканал</button>
+  </p>
+
+  <div class="legend" aria-hidden="true">
+    <span><span class="dot on"></span><span class="dot"></span><span class="dot"></span> оптовий ринок</span>
+    <span><span class="dot"></span><span class="dot on"></span><span class="dot"></span> монополії: енергетика</span>
+    <span><span class="dot"></span><span class="dot"></span><span class="dot on"></span> монополії: тепло і вода</span>
+  </div>
+
+  <div id="status" role="status">Завантажую дані…</div>
+  <div id="results"></div>
+
+  <section class="block" id="files">
+    <h2>Файли на порталі</h2>
+    <p>Для кожного набору портал зберігає, як часто його обіцяють оновлювати. Поруч дата останнього файлу.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Реєстр</th><th>Останній файл</th><th>Заявлено</th><th class="num">Записів</th><th class="num">Зауважень</th></tr></thead>
+      <tbody id="datasets"></tbody>
+    </table></div>
+  </section>
+
+  <section class="block" id="quality">
+    <h2>Що заважає читати ці файли</h2>
+    <p>Технічні вади експорту, які програма помітила під час імпорту. Номери рядків і приклади є у <a href="https://github.com/maksym-garkusha/energoreestr/blob/main/docs/quality-report.md">повному звіті</a>.</p>
+    <div class="issues" id="issues"></div>
+  </section>
+</main>
+
+<footer>
+  <p>Незалежний навчальний проєкт. Не пов'язаний з НКРЕКП чи іншими державними органами і не замінює офіційні реєстри: для юридично значущих дій користуйтеся першоджерелом.</p>
+  <p>Дані: НКРЕКП через <a href="https://data.gov.ua">Єдиний державний вебпортал відкритих даних</a>, ліцензія Creative Commons Attribution. Записи про фізичних осіб-підприємців на сторінку не виносяться. <span id="generated"></span></p>
+  <p>Автор: <a href="https://github.com/maksym-garkusha">Максим Гаркуша</a>.</p>
+</footer>
+
+</div>
+<script>
+const REGISTERS = [
+  ['wholesale', 'Оптовий енергетичний ринок'],
+  ['monopolies-energy', 'Природні монополії: енергетика'],
+  ['monopolies-heat-water', 'Природні монополії: тепло і вода']
+];
+const FREQUENCY = {
+  'once a day': 'щодня', 'once a week': 'щотижня', 'once a month': 'щомісяця',
+  'once a quarter': 'щокварталу', 'once a half year': 'раз на півроку', 'once a year': 'щороку'
+};
+const LOOKALIKES = { A:'А', B:'В', C:'С', E:'Е', H:'Н', I:'І', K:'К', M:'М', O:'О', P:'Р', T:'Т', X:'Х', Y:'У' };
+const MAX_SHOWN = 40;
+
+const $ = id => document.getElementById(id);
+const input = $('q'), statusLine = $('status'), results = $('results');
+let companies = [], descriptions = {};
+
+// те саме, що Names.SearchKey на сервері: назва і запит мають збігатися після приведення
+function searchKey(text) {
+  const cleaned = text.toUpperCase()
+    .replace(/[«»“”„]/g, '"').replace(/[’ʼ`′]/g, "'")
+    .replace(/\s+/g, ' ').trim();
+  return cleaned.split(' ').map(word =>
+    /[Ѐ-ӿ]/.test(word) ? word.replace(/[A-Z]/g, ch => LOOKALIKES[ch] || ch) : word
+  ).join(' ');
+}
+
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+}
+
+function date(iso) {
+  return iso ? iso.slice(0, 10).split('-').reverse().join('.') : '';
+}
+
+function find(query) {
+  const q = query.trim();
+  if (q.length < 2) return null;
+
+  if (/^\d+$/.test(q)) {
+    const bare = q.replace(/^0+/, '');
+    return companies.filter(c => c.code && c.code.replace(/^0+/, '').startsWith(bare));
+  }
+  const upper = q.toUpperCase();
+  if (/^[0-9A-Z-]{6,}$/.test(upper) && /\d/.test(upper)) {
+    const byCode = companies.filter(c => c.wholesale.some(w => (w.eic || '').startsWith(upper) || w.ecrb.startsWith(upper)));
+    if (byCode.length) return byCode;
+  }
+  const key = searchKey(q);
+  return companies.filter(c => c.key.includes(key));
+}
+
+function presence(c) {
+  const on = [c.wholesale.length > 0,
+    c.monopolies.some(m => m.dataset === 'monopolies-energy'),
+    c.monopolies.some(m => m.dataset === 'monopolies-heat-water')];
+  return '<span class="presence">' + on.map(x => `<span class="dot${x ? ' on' : ''}"></span>`).join('') + '</span>';
+}
+
+function row(term, value, cls) {
+  return value ? `<dt>${term}</dt><dd${cls ? ` class="${cls}"` : ''}>${esc(value)}</dd>` : '';
+}
+
+function registerBlock(c, [key, title]) {
+  let records;
+  if (key === 'wholesale') {
+    records = c.wholesale.map(w => '<dl class="rec">' +
+      row('Код реєстрації', w.ecrb, 'code') +
+      row('EIC', w.eic, 'code') +
+      row('Форма', w.legalForm) +
+      row('Зареєстровано', date(w.registeredOn)) +
+      row('Виключено', date(w.excludedOn)) +
+      row('Місце', [w.settlement, w.country].filter(Boolean).join(', ')) +
+      row('Сайт', w.website) + '</dl>');
+  } else {
+    records = c.monopolies.filter(m => m.dataset === key).map(m => '<dl class="rec">' +
+      row('Діяльність', m.activity.toLowerCase()) +
+      row('Територія', m.territory.toLowerCase()) +
+      row('Місцезнаходження', m.location.toLowerCase()) + '</dl>');
+  }
+  const content = records.length ? records.join('') : '<span class="none">запису немає</span>';
+  return `<div class="reg"><h3>${title}</h3><div>${content}</div></div>`;
+}
+
+function card(c) {
+  const id = c.code
+    ? `<span class="code${c.codeValid === false ? ' checksum-bad' : ''}">${esc(c.code)}</span>`
+    : '<span>іноземна компанія</span>';
+  let flags = '';
+  if (c.issues.length || c.codeValid === false) {
+    const items = c.issues.map(i =>
+      `<li>${esc(descriptions[i.code] || i.code)}${i.value ? `: <span class="code">${esc(i.value)}</span>` : ''} <span class="none">(рядок ${i.line})</span></li>`);
+    flags = `<div class="flags"><p>Зауваження до записів у файлах</p><ul>${items.join('')}</ul></div>`;
+  }
+  return `<details class="result"><summary>${presence(c)}<span class="name">${esc(c.name)}</span><span class="id">${id}</span></summary>` +
+    `<div class="body">${REGISTERS.map(r => registerBlock(c, r)).join('')}${flags}</div></details>`;
+}
+
+function show(query) {
+  const found = find(query);
+  if (found === null) {
+    results.innerHTML = '';
+    statusLine.textContent = `У базі ${companies.length.toLocaleString('uk')} компаній. Введіть щонайменше два символи.`;
+    return;
+  }
+  if (!found.length) {
+    results.innerHTML = '';
+    statusLine.textContent = 'Нічого не знайдено. Перевірте код або спробуйте частину назви.';
+    return;
+  }
+  statusLine.textContent = found.length > MAX_SHOWN
+    ? `Знайдено ${found.length}, показано перші ${MAX_SHOWN}. Уточніть запит.`
+    : `Знайдено: ${found.length}`;
+  results.innerHTML = found.slice(0, MAX_SHOWN).map(card).join('');
+  if (found.length === 1) results.firstElementChild.open = true;
+}
+
+function fillDatasets(data) {
+  const issueTotals = Object.fromEntries(data.quality.map(q => [q.dataset, q.issues.reduce((sum, i) => sum + i.count, 0)]));
+  $('datasets').innerHTML = data.datasets.map(d => {
+    const age = d.overdue ? ` <span class="late">${d.daysSinceUpdate} дн. тому</span>` : '';
+    return `<tr><td><a href="${esc(d.portalUrl)}">${esc(d.title)}</a></td>` +
+      `<td>${date(d.fileModifiedAt)}${age}</td>` +
+      `<td>${FREQUENCY[d.updateFrequency] || 'не вказано'}</td>` +
+      `<td class="num">${d.records.toLocaleString('uk')}</td>` +
+      `<td class="num">${(issueTotals[d.dataset] || 0).toLocaleString('uk')}</td></tr>`;
+  }).join('');
+
+  const titles = Object.fromEntries(data.datasets.map(d => [d.dataset, d.title]));
+  $('issues').innerHTML = data.quality.filter(q => q.issues.length).map(q =>
+    `<div><h3>${esc(titles[q.dataset] || q.dataset)}</h3>` +
+    q.issues.map(i => `<div class="bar"><b>${i.count}</b><span>${esc(i.description)}</span></div>`).join('') + '</div>'
+  ).join('');
+
+  $('generated').textContent = `Оновлено ${date(data.generatedAt)}.`;
+}
+
+let timer;
+input.addEventListener('input', () => {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    show(input.value);
+    const url = new URL(location);
+    input.value.trim() ? url.searchParams.set('q', input.value.trim()) : url.searchParams.delete('q');
+    history.replaceState(null, '', url);
+  }, 120);
+});
+document.querySelectorAll('.examples button').forEach(button =>
+  button.addEventListener('click', () => { input.value = button.dataset.q; show(input.value); input.focus(); }));
+
+fetch('data.json')
+  .then(response => { if (!response.ok) throw new Error(response.status); return response.json(); })
+  .then(data => {
+    companies = data.companies;
+    data.quality.forEach(q => q.issues.forEach(i => { descriptions[i.code] = i.description; }));
+    fillDatasets(data);
+    input.disabled = false;
+    input.value = new URL(location).searchParams.get('q') || '';
+    show(input.value);
+  })
+  .catch(() => {
+    statusLine.textContent = 'Не вдалося завантажити дані. Локально спершу виконайте: dotnet run -- import, потім dotnet run -- export ../../site';
+  });
+</script>
+</body>
+</html>
