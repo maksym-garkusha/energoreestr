@@ -1,0 +1,47 @@
+name: site
+
+# Раз на тиждень забирає свіжі файли з data.gov.ua і перезбирає сторінку пошуку.
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  push:
+    branches: [main]
+    paths: ['src/**', 'site/**', '.github/workflows/site.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Import registers
+        working-directory: src/Energoreestr
+        run: dotnet run -c Release -- import
+      - name: Export data for the page
+        working-directory: src/Energoreestr
+        run: dotnet run -c Release --no-build -- export ../../site
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
