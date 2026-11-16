@@ -61,7 +61,7 @@ using (var scope = app.Services.CreateScope())
     {
         string dir = args.Length > 1 ? args[1] : "site";
         var summary = await SiteExport.WriteAsync(db, dir);
-        Console.WriteLine($"{summary.Companies} компаній записано в {Path.Combine(dir, SiteExport.FileName)}");
+        Console.WriteLine($"{summary.Companies} компаній записано в {Path.Combine(dir, SiteExport.FileName)}, підприємців пропущено: {summary.IndividualsSkipped}");
         return 0;
     }
 }
@@ -83,9 +83,12 @@ static async Task<int> RunImport(Importer importer, string[] args)
 {
     if (args.Length == 1)
     {
-        foreach (var outcome in await importer.ImportAllAsync())
+        var outcomes = await importer.ImportAllAsync();
+        foreach (var outcome in outcomes)
             Console.WriteLine($"{outcome.Dataset}: {outcome.Message}");
-        return 0;
+        // якщо хоч один набір не вдалося забрати, код повернення має це показати:
+        // інакше щотижнева збірка викладе сторінку з неповними даними
+        return outcomes.Any(o => o.Message.StartsWith("помилка")) ? 1 : 0;
     }
 
     if (args.Length != 3 || Datasets.Find(args[1]) is not { } def || !File.Exists(args[2]))

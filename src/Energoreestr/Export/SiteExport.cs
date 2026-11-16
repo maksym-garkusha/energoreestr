@@ -11,9 +11,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Energoreestr.Export;
 
 /// <param name="Key">Назва у вигляді для пошуку, сторінка порівнює з нею запит.</param>
-/// <param name="CodeValid">null, якщо коду немає або це не ЄДРПОУ (іноземна компанія).</param>
+/// <param name="CodeValid">null, якщо коду немає або це не ЄДРПОУ.</param>
+/// <param name="Foreign">true, якщо всі записи компанії з іншої країни.</param>
 public record SiteCompany(
-    string? Code, bool? CodeValid, string Name, string Key,
+    string? Code, bool? CodeValid, bool Foreign, string Name, string Key,
     List<SiteParticipant> Wholesale, List<SiteMonopoly> Monopolies, List<SiteIssue> Issues);
 
 public record SiteParticipant(
@@ -71,7 +72,9 @@ public static class SiteExport
         foreach (var p in participants.Where(p => !p.IsIndividual))
         {
             // українські компанії зводимо за ЄДРПОУ, решту лишаємо окремими записами
-            bool ukrainian = p.Country == "Україна" && p.IdCode is not null;
+            // у кількох записах замість ЄДРПОУ стоїть дев'ятизначний податковий номер
+            // договору про спільну діяльність, за ним зводити не можна
+            bool ukrainian = p.Country == "Україна" && p.IdCode is not null && Edrpou.Normalize(p.IdCode) == p.IdCode;
             string groupKey = ukrainian ? p.IdCode! : "ecrb:" + p.EcrbCode;
             var draft = Get(groups, groupKey, ukrainian ? p.IdCode : null, p.Name);
             draft.Wholesale.Add(new SiteParticipant(
@@ -85,6 +88,8 @@ public static class SiteExport
             string groupKey = m.Edrpou ?? "name:" + m.Dataset + ":" + m.SearchName;
             var draft = Get(groups, groupKey, m.Edrpou, m.Name);
             draft.Monopolies.Add(new SiteMonopoly(m.Dataset, m.Activity, m.Territory, m.Location));
+            // якщо коду у файлі немає, зауваження записане під назвою
+            if (m.Edrpou is null) draft.IssueKeys.Add(m.Name);
         }
 
         // зауваження прив'язані або до коду ECRB, або до ЄДРПОУ в тому вигляді,
@@ -109,6 +114,7 @@ public static class SiteExport
             companies.Add(new SiteCompany(
                 draft.Code,
                 draft.Code is null ? null : Edrpou.IsValid(draft.Code),
+                draft.Monopolies.Count == 0 && draft.Wholesale.All(w => w.Country != "Україна"),
                 draft.Name, Names.SearchKey(draft.Name),
                 draft.Wholesale,
                 draft.Monopolies.OrderBy(m => m.Dataset).ThenBy(m => m.Activity).ToList(),

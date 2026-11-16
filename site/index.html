@@ -214,8 +214,10 @@ function find(query) {
   if (q.length < 2) return null;
 
   if (/^\d+$/.test(q)) {
-    const bare = q.replace(/^0+/, '');
-    return companies.filter(c => c.code && c.code.replace(/^0+/, '').startsWith(bare));
+    // у файлах код часто записаний без нулів на початку, тому 3346331 теж має знайти 03346331
+    if (q.length >= 8) return companies.filter(c => c.code === q);
+    const padded = q.padStart(8, '0');
+    return companies.filter(c => c.code && (c.code.startsWith(q) || c.code === padded));
   }
   const upper = q.toUpperCase();
   if (/^[0-9A-Z-]{6,}$/.test(upper) && /\d/.test(upper)) {
@@ -250,9 +252,9 @@ function registerBlock(c, [key, title]) {
       row('Сайт', w.website) + '</dl>');
   } else {
     records = c.monopolies.filter(m => m.dataset === key).map(m => '<dl class="rec">' +
-      row('Діяльність', m.activity.toLowerCase()) +
-      row('Територія', m.territory.toLowerCase()) +
-      row('Місцезнаходження', m.location.toLowerCase()) + '</dl>');
+      row('Діяльність', m.activity) +
+      row('Територія', m.territory) +
+      row('Місцезнаходження', m.location) + '</dl>');
   }
   const content = records.length ? records.join('') : '<span class="none">запису немає</span>';
   return `<div class="reg"><h3>${title}</h3><div>${content}</div></div>`;
@@ -261,7 +263,7 @@ function registerBlock(c, [key, title]) {
 function card(c) {
   const id = c.code
     ? `<span class="code${c.codeValid === false ? ' checksum-bad' : ''}">${esc(c.code)}</span>`
-    : '<span>іноземна компанія</span>';
+    : `<span>${c.foreign ? 'іноземна компанія' : 'без коду ЄДРПОУ'}</span>`;
   let flags = '';
   if (c.issues.length || c.codeValid === false) {
     const items = c.issues.map(i =>
@@ -311,18 +313,20 @@ function fillDatasets(data) {
   $('generated').textContent = `Оновлено ${date(data.generatedAt)}.`;
 }
 
+function search() {
+  show(input.value);
+  const url = new URL(location);
+  input.value.trim() ? url.searchParams.set('q', input.value.trim()) : url.searchParams.delete('q');
+  history.replaceState(null, '', url);
+}
+
 let timer;
 input.addEventListener('input', () => {
   clearTimeout(timer);
-  timer = setTimeout(() => {
-    show(input.value);
-    const url = new URL(location);
-    input.value.trim() ? url.searchParams.set('q', input.value.trim()) : url.searchParams.delete('q');
-    history.replaceState(null, '', url);
-  }, 120);
+  timer = setTimeout(search, 120);
 });
 document.querySelectorAll('.examples button').forEach(button =>
-  button.addEventListener('click', () => { input.value = button.dataset.q; show(input.value); input.focus(); }));
+  button.addEventListener('click', () => { input.value = button.dataset.q; search(); input.focus(); }));
 
 fetch('data.json')
   .then(response => { if (!response.ok) throw new Error(response.status); return response.json(); })
