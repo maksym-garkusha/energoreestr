@@ -189,11 +189,17 @@ public static partial class WholesaleParser
             if (insideInfo is not null && insideInfo != website && !LooksLikeUrl(insideInfo))
                 issues.Add(new RowIssue(record.Line, key, IssueCodes.UrlFormat, insideInfo));
 
+            // у підприємця адреса це зазвичай домашня адреса, а номер платника ПДВ
+            // збігається з РНОКПП, тому їх теж не зберігаємо
+            string? address = isIndividual ? null : Value(ColAddress);
+            string? zip = isIndividual ? null : Value(ColZip);
+            string? vat = isIndividual ? null : Value(ColVat);
+
             rows.Add(new ParticipantRow(
                 number, key, submitted, registered, excluded,
                 name, f[ColLegalForm],
-                Value(ColAddress), Value(ColSettlement), Value(ColZip), country,
-                eic, bic, lei, Value(ColVat), idCode, isIndividual,
+                address, Value(ColSettlement), zip, country,
+                eic, bic, lei, vat, idCode, isIndividual,
                 website, insideInfo));
         }
 

@@ -73,4 +73,18 @@ public class MonopolyParserTests
         Assert.Null(row.Edrpou);
         Assert.DoesNotContain("1234567890", row.Key);
     }
+
+    [Fact]
+    public void Organisation_with_a_ten_digit_code_is_not_taken_for_a_person()
+    {
+        string csv = "Number;Код;Назва;Місцезнаходження;Діяльність;Територія\n" +
+                     "1;1234567890;ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ \"\"ТЕПЛО\"\";КИЇВСЬКА ОБЛАСТЬ;ТЕПЛО;КИЇВСЬКА ОБЛАСТЬ\n";
+
+        var file = MonopolyParser.Parse(csv);
+
+        var row = Assert.Single(file.Rows);
+        Assert.False(row.IsIndividual);
+        Assert.Null(row.Edrpou);
+        Assert.Contains(file.Issues, i => i.Code == IssueCodes.IdCodeFormat);
+    }
 }

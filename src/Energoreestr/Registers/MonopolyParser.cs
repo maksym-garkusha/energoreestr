@@ -65,7 +65,7 @@ public static class MonopolyParser
             string? edrpou = null;
             bool isIndividual = false;
 
-            if (rawCode.Length == 10 && rawCode.All(char.IsAsciiDigit))
+            if (rawCode.Length == 10 && rawCode.All(char.IsAsciiDigit) && LooksLikePersonName(name))
             {
                 // РНОКПП підприємця не зберігаємо
                 isIndividual = true;
@@ -104,6 +104,20 @@ public static class MonopolyParser
         }
 
         return new MonopolyFile(rows, issues, total);
+    }
+
+    // Десять цифр у колонці коду бувають і в організацій, коли код набрали з помилкою.
+    // Підприємець записаний або з позначкою "фізична особа-підприємець", або просто
+    // як прізвище, ім'я, по батькові: два-чотири слова без лапок.
+    private static bool LooksLikePersonName(string name)
+    {
+        if (name.StartsWith("ФІЗИЧНА ОСОБА", StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith("ФОП ", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var words = name.Split(' ');
+        return words.Length is >= 2 and <= 4
+            && words.All(w => w.All(c => char.IsLetter(c) || c is '-' or '\'' or '’' or 'ʼ'));
     }
 
     // прибирає подвійні пробіли й перенесення всередині клітинки
