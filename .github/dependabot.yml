@@ -1,0 +1,28 @@
+# Щотижневі оновлення залежностей. Мажорні версії пакетів ASP.NET і EF Core ідуть разом
+# із новим .NET, тож їх переводимо вручну, а не окремими PR. Так само xunit:
+# runner 4 потребує xunit v3, а це окремий перехід тестового проєкту.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      nuget-minor:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "Microsoft.*"
+        update-types: ["version-update:semver-major"]
+      # інструмент міграцій з dotnet-tools.json тримаємо на тій самій мажорній версії, що й EF Core
+      - dependency-name: "dotnet-ef"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "xunit*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
