@@ -2,7 +2,7 @@
 
 ## Як повідомити про вразливість
 
-Не відкривайте публічний issue. На вкладці [Security](https://github.com/maksym-garkusha/energoreestr/security) є кнопка «Report a vulnerability»: повідомлення через неї бачить тільки власник репозиторію.
+Не відкривайте публічний issue. На вкладці [Security and quality](https://github.com/maksym-garkusha/energoreestr/security) є кнопка «Report a vulnerability»: повідомлення через неї бачить тільки власник репозиторію.
 
 Відповідь протягом 7 днів. Винагород за знахідки немає, це навчальний проєкт без бюджету.
 
@@ -19,4 +19,4 @@
 
 ## In English
 
-Please do not open a public issue. Use the "Report a vulnerability" button on the Security tab; only the repository owner sees the report. In scope: the search page on GitHub Pages with its `data.json`, and the code here (import and parsing, the local HTTP API, the Actions workflows). Out of scope: data.gov.ua, the registers themselves and GitHub's own platforms. Expect a reply within 7 days. There is no bug bounty.
+Please do not open a public issue. Use the "Report a vulnerability" button on the Security and quality tab; only the repository owner sees the report. In scope: the search page on GitHub Pages with its `data.json`, and the code here (import and parsing, the local HTTP API, the Actions workflows). Out of scope: data.gov.ua, the registers themselves and GitHub's own platforms. Expect a reply within 7 days. There is no bug bounty.
