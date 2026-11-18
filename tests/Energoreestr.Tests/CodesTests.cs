@@ -62,7 +62,7 @@ public class CodesTests
     }
 
     [Theory]
-    [InlineData("62z9628330106799")]   // мала літера
+    [InlineData("62z000000000123Y")]   // мала літера, синтетичний код
     [InlineData("62X863954335972")]    // 15 символів
     [InlineData("56XO000172D5700U, 56XO000172D4R00T")]
     public void Eic_rejects_wrong_format(string code)
