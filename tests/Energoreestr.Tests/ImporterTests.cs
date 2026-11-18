@@ -1,4 +1,5 @@
 using System.Text;
+using Energoreestr.Api;
 using Energoreestr.Data;
 using Energoreestr.Import;
 using Microsoft.Data.Sqlite;
@@ -46,13 +47,27 @@ public class ImporterTests : IDisposable
         var outcome = await Import(Wholesale, Fixture.Text("wholesale-sample.csv"), 1);
 
         Assert.True(outcome.Imported);
-        Assert.Equal(17, await _db.Participants.CountAsync());
+        Assert.Equal(16, await _db.Participants.CountAsync());
         Assert.Empty(await _db.Changes.ToListAsync());
 
         var snapshot = await _db.Snapshots.SingleAsync();
-        Assert.Equal(17, snapshot.ImportedRows);
+        Assert.Equal(16, snapshot.ImportedRows);
+        Assert.Equal(3, snapshot.SoleProprietors);
         Assert.Equal(await _db.Issues.CountAsync(), snapshot.IssueCount);
         Assert.True(snapshot.IssueCount > 0);
+    }
+
+    [Fact]
+    public async Task Record_count_of_a_file_includes_sole_proprietors_that_are_not_stored()
+    {
+        await Import(Wholesale, Fixture.Text("wholesale-sample.csv"), 1);
+        _db.DatasetStates.Add(new DatasetState { Dataset = Datasets.Wholesale, Title = "Оптовий ринок" });
+        await _db.SaveChangesAsync();
+
+        var status = Assert.Single(await DatasetsApi.List(_db, CancellationToken.None));
+
+        // 16 компаній у базі і 3 підприємці, яких там немає: у реєстрі 19 записів
+        Assert.Equal(19, status.Records);
     }
 
     [Fact]
@@ -113,7 +128,7 @@ public class ImporterTests : IDisposable
         Assert.Equal("2026-10-01", excluded.NewValue);
 
         // таблиця відповідає другому файлу
-        Assert.Equal(17, await _db.Participants.CountAsync());
+        Assert.Equal(16, await _db.Participants.CountAsync());
         Assert.False(await _db.Participants.AnyAsync(p => p.EcrbCode == "ECRB-UA-20231023-001"));
         var updated = await _db.Participants.SingleAsync(p => p.EcrbCode == "ECRB-UA-20231019-001");
         Assert.Equal("mgbg.ua", updated.Website);
@@ -154,8 +169,8 @@ public class ImporterTests : IDisposable
         await Import(Wholesale, Fixture.Text("wholesale-sample.csv"), 1);
         await Import(HeatWater, Fixture.Text("heat-water-sample.csv"), 2);
 
-        Assert.Equal(17, await _db.Participants.CountAsync());
-        Assert.Equal(9, await _db.Monopolies.CountAsync());
+        Assert.Equal(16, await _db.Participants.CountAsync());
+        Assert.Equal(8, await _db.Monopolies.CountAsync());
         Assert.All(await _db.Monopolies.ToListAsync(), m => Assert.Equal(Datasets.MonopoliesHeatWater, m.Dataset));
         Assert.True(await _db.Issues.AnyAsync(i => i.Dataset == Datasets.Wholesale));
         Assert.True(await _db.Issues.AnyAsync(i => i.Dataset == Datasets.MonopoliesHeatWater));

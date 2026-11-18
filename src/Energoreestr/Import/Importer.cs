@@ -103,6 +103,7 @@ public class Importer(RegistryDb db, DataGovClient portal, ILogger<Importer> log
             issues = file.Issues;
             snapshot.TotalRows = file.TotalRows;
             snapshot.ImportedRows = file.Rows.Count;
+            snapshot.SoleProprietors = file.SoleProprietors;
 
             var existing = await db.Participants.ToDictionaryAsync(p => p.EcrbCode, ct);
             var incoming = file.Rows.ToDictionary(r => r.EcrbCode, ToEntity);
@@ -114,6 +115,7 @@ public class Importer(RegistryDb db, DataGovClient portal, ILogger<Importer> log
             issues = file.Issues;
             snapshot.TotalRows = file.TotalRows;
             snapshot.ImportedRows = file.Rows.Count;
+            snapshot.SoleProprietors = file.SoleProprietors;
 
             var existing = await db.Monopolies.Where(m => m.Dataset == def.Key).ToDictionaryAsync(m => m.Key, ct);
             var incoming = file.Rows.ToDictionary(r => r.Key, r => ToEntity(r, def.Key));
@@ -223,7 +225,6 @@ public class Importer(RegistryDb db, DataGovClient portal, ILogger<Importer> log
         Lei = row.Lei,
         Vat = row.Vat,
         IdCode = row.IdCode,
-        IsIndividual = row.IsIndividual,
         SubmittedOn = row.SubmittedOn,
         RegisteredOn = row.RegisteredOn,
         ExcludedOn = row.ExcludedOn,
@@ -236,7 +237,6 @@ public class Importer(RegistryDb db, DataGovClient portal, ILogger<Importer> log
         Dataset = dataset,
         Key = row.Key,
         Edrpou = row.Edrpou,
-        IsIndividual = row.IsIndividual,
         Name = row.Name,
         SearchName = Names.SearchKey(row.Name),
         Location = row.Location,

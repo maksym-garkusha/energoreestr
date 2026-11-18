@@ -7,6 +7,7 @@ namespace Energoreestr.Api;
 /// <param name="ExpectedEveryDays">Заявлена на порталі періодичність оновлення, у днях.</param>
 /// <param name="DaysSinceUpdate">Скільки днів минуло від останнього оновлення файлу.</param>
 /// <param name="Overdue">true, якщо файл не оновлювали довше, ніж обіцяє періодичність.</param>
+/// <param name="Records">Записів в останньому файлі без повторів, разом із записами підприємців, яких у базі немає.</param>
 public record DatasetStatus(
     string Dataset, string Title, string PortalUrl,
     string? UpdateFrequency, int? ExpectedEveryDays,
@@ -35,6 +36,8 @@ public static class DatasetsApi
             .GroupBy(m => m.Dataset)
             .Select(g => new { Dataset = g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.Dataset, g => g.Count, ct);
+        var soleProprietors = (await QualityApi.LatestSnapshots(db, ct))
+            .ToDictionary(s => s.Dataset, s => s.SoleProprietors);
 
         var now = DateTime.UtcNow;
         var result = new List<DatasetStatus>();
@@ -48,9 +51,9 @@ public static class DatasetsApi
             int? age = state.ResourceModifiedAt is { } modified ? (int)(now - modified).TotalDays : null;
             bool? overdue = expected is not null && age is not null ? age > expected : null;
 
-            int records = def.Kind == RegisterKind.Wholesale
-                ? participants
-                : monopolies.GetValueOrDefault(def.Key);
+            // підприємців немає в базі, але це записи реєстру, і в кількості вони є
+            int records = (def.Kind == RegisterKind.Wholesale ? participants : monopolies.GetValueOrDefault(def.Key))
+                + soleProprietors.GetValueOrDefault(def.Key);
 
             result.Add(new DatasetStatus(
                 def.Key, state.Title, $"https://data.gov.ua/dataset/{def.PackageId}",

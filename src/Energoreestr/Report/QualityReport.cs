@@ -48,9 +48,17 @@ public static class QualityReport
                 md.AppendLine();
             }
 
-            if (s.ImportedRows != s.TotalRows)
+            if (s.SoleProprietors > 0)
             {
-                md.AppendLine($"До бази потрапило {s.ImportedRows} записів із {s.TotalRows}: решта це повтори або рядки, які не вдалося прочитати.");
+                md.AppendLine($"Записів про фізичних осіб-підприємців: {s.SoleProprietors}. У базу вони не потрапляють, " +
+                    "а в зауваженнях до їхніх рядків немає ні коду, ні значень з файлу.");
+                md.AppendLine();
+            }
+
+            int skipped = s.TotalRows - s.ImportedRows - s.SoleProprietors;
+            if (skipped > 0)
+            {
+                md.AppendLine($"Ще {skipped} рядків до бази не потрапили: це повтори або рядки, які не вдалося прочитати.");
                 md.AppendLine();
             }
 

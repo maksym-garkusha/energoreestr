@@ -2,9 +2,10 @@ namespace Energoreestr.Registers;
 
 /// <summary>Зауваження до одного рядка файлу.</summary>
 /// <param name="Line">Номер рядка у файлі.</param>
-/// <param name="Key">За чим цей запис можна знайти в реєстрі (код реєстрації, ЄДРПОУ або назва).</param>
+/// <param name="Key">За чим цей запис можна знайти в реєстрі (код реєстрації, ЄДРПОУ або назва),
+/// для підприємця <see cref="SoleProprietor.Key"/>.</param>
 /// <param name="Code">Вид зауваження, одна з констант <see cref="IssueCodes"/>.</param>
-/// <param name="Value">Значення з файлу, яке викликало зауваження.</param>
+/// <param name="Value">Значення з файлу, яке викликало зауваження. У підприємця завжди null.</param>
 public record RowIssue(int Line, string Key, string Code, string? Value);
 
 public static class IssueCodes
@@ -19,6 +20,7 @@ public static class IssueCodes
     public const string EdrpouChecksum = "edrpou-checksum";
     public const string EdrpouLeadingZeros = "edrpou-leading-zeros";
     public const string IdCodeFormat = "id-code-format";
+    public const string TaxNumberInOrganisation = "tax-number-in-organisation";
     public const string EicFormat = "eic-format";
     public const string EicChecksum = "eic-checksum";
     public const string BicFormat = "bic-format";
@@ -39,6 +41,7 @@ public static class IssueCodes
         [EdrpouChecksum] = "Код ЄДРПОУ не проходить перевірку контрольного розряду, варто звірити з ЄДР",
         [EdrpouLeadingZeros] = "У коді ЄДРПОУ загублено нулі на початку",
         [IdCodeFormat] = "Ідентифікаційний код не схожий ні на ЄДРПОУ, ні на РНОКПП",
+        [TaxNumberInOrganisation] = "Замість ЄДРПОУ організації записано десять цифр, як у РНОКПП; сам код не зберігається",
         [EicFormat] = "EIC-код не відповідає формату (16 символів: цифри, великі латинські літери, дефіс)",
         [EicChecksum] = "EIC-код не проходить перевірку контрольного символу",
         [BicFormat] = "BIC не відповідає формату (8 або 11 символів)",

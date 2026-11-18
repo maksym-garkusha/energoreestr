@@ -26,9 +26,11 @@ public class MonopolyParserTests
     {
         var file = MonopolyParser.Parse(Fixture.Text("heat-water-sample.csv"));
 
-        // у зразку 10 записів і 2 рядки з назвою області; один запис повторюється
-        Assert.Equal(10, file.TotalRows);
-        Assert.Equal(9, file.Rows.Count);
+        // у зразку 13 записів і 2 рядки з назвою області. Чотири записи про вигаданих
+        // підприємців, один з них повтор, і ще один повтор серед організацій
+        Assert.Equal(13, file.TotalRows);
+        Assert.Equal(8, file.Rows.Count);
+        Assert.Equal(3, file.SoleProprietors);
         Assert.DoesNotContain(file.Rows, r => r.Name == "ПОЛТАВСЬКА ОБЛАСТЬ");
     }
 
@@ -55,7 +57,7 @@ public class MonopolyParserTests
     {
         var file = MonopolyParser.Parse(Fixture.Text("heat-water-sample.csv"));
 
-        var duplicate = file.Issues.Single(i => i.Code == IssueCodes.DuplicateKey);
+        var duplicate = file.Issues.Single(i => i.Code == IssueCodes.DuplicateKey && i.Key != SoleProprietor.Key);
         Assert.Contains("ПОЛТАВАВОДОКАНАЛ", duplicate.Value);
 
         var badCode = file.Issues.Single(i => i.Code == IssueCodes.IdCodeFormat);
@@ -65,26 +67,66 @@ public class MonopolyParserTests
     }
 
     [Fact]
-    public void Tax_number_of_a_sole_proprietor_is_not_kept()
+    public void Sole_proprietors_are_counted_but_not_kept()
     {
         var file = MonopolyParser.Parse(Fixture.Text("heat-water-sample.csv"));
 
-        var row = file.Rows.Single(r => r.IsIndividual);
-        Assert.Null(row.Edrpou);
-        Assert.DoesNotContain("1234567890", row.Key);
+        string kept = string.Join('\n', file.Rows.Select(r => r.ToString() + r.Key).Concat(file.Issues.Select(i => i.ToString())));
+        foreach (var trace in Fixture.SoleProprietorTraces)
+            Assert.DoesNotContain(trace, kept);
+
+        var repeated = file.Issues.Single(i => i.Code == IssueCodes.DuplicateKey && i.Key == SoleProprietor.Key);
+        Assert.Null(repeated.Value);
     }
 
-    [Fact]
-    public void Organisation_with_a_ten_digit_code_is_not_taken_for_a_person()
+    [Theory]
+    [InlineData("1234567899")]
+    [InlineData("123 456 7899")]
+    [InlineData("123-456-7899")]
+    [InlineData("1234567899.")]
+    public void Person_name_with_ten_digits_is_a_sole_proprietor(string code)
     {
-        string csv = "Number;Код;Назва;Місцезнаходження;Діяльність;Територія\n" +
-                     "1;1234567890;ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ \"\"ТЕПЛО\"\";КИЇВСЬКА ОБЛАСТЬ;ТЕПЛО;КИЇВСЬКА ОБЛАСТЬ\n";
+        var file = MonopolyParser.Parse(Csv(code, "ВИГАДАНИЙ ІВАН ІВАНОВИЧ"));
 
-        var file = MonopolyParser.Parse(csv);
+        Assert.Empty(file.Rows);
+        Assert.Equal(1, file.SoleProprietors);
+        Assert.Empty(file.Issues);
+    }
+
+    [Theory]
+    [InlineData("12345678")]
+    [InlineData("")]
+    public void Marker_in_the_name_is_enough_whatever_the_code(string code)
+    {
+        var file = MonopolyParser.Parse(Csv(code, "фоп Вигаданий І. І."));
+
+        Assert.Empty(file.Rows);
+        Assert.Equal(1, file.SoleProprietors);
+        Assert.Empty(file.Issues);
+    }
+
+    [Theory]
+    [InlineData("1234567899")]
+    [InlineData("123 456 7899")]
+    [InlineData("1234567899.")]
+    public void Organisation_with_a_ten_digit_code_keeps_its_name_but_not_the_code(string code)
+    {
+        const string name = "ТОВАРИСТВО З ОБМЕЖЕНОЮ ВІДПОВІДАЛЬНІСТЮ \"ТЕПЛО\"";
+
+        var file = MonopolyParser.Parse(Csv(code, name));
 
         var row = Assert.Single(file.Rows);
-        Assert.False(row.IsIndividual);
+        Assert.Equal(name, row.Name);
         Assert.Null(row.Edrpou);
-        Assert.Contains(file.Issues, i => i.Code == IssueCodes.IdCodeFormat);
+        Assert.DoesNotContain("456", row.Key);
+
+        var issue = Assert.Single(file.Issues);
+        Assert.Equal(IssueCodes.TaxNumberInOrganisation, issue.Code);
+        Assert.Equal(name, issue.Key);
+        Assert.Null(issue.Value);
     }
+
+    private static string Csv(string code, string name) =>
+        "Number;Код;Назва;Місцезнаходження;Діяльність;Територія\n" +
+        $"1;{code};\"{name.Replace("\"", "\"\"")}\";КИЇВСЬКА ОБЛАСТЬ;ТЕПЛО;КИЇВСЬКА ОБЛАСТЬ\n";
 }

@@ -72,8 +72,9 @@ public static class CompaniesApi
             string term = q.Trim();
             if (term.All(char.IsAsciiDigit))
             {
+                // довший за 8 цифр код не ЄДРПОУ, і порівняння з null тут знайшло б усі записи без коду
                 string? padded = Edrpou.Normalize(term);
-                query = query.Where(m => m.Edrpou == padded);
+                query = query.Where(m => m.Edrpou != null && m.Edrpou == padded);
             }
             else
             {

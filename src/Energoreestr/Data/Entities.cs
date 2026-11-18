@@ -16,6 +16,8 @@ public class Snapshot
     public int TotalRows { get; set; }
     public int ImportedRows { get; set; }
     public int IssueCount { get; set; }
+    /// <summary>Записи про фізичних осіб-підприємців. Їх тільки рахуємо, у базі їх немає.</summary>
+    public int SoleProprietors { get; set; }
 
     // скільки записів з'явилося, зникло і змінилося проти попереднього файлу
     public int Added { get; set; }
@@ -55,7 +57,6 @@ public class Participant : IRegisterRecord
     public string? Vat { get; set; }
     /// <summary>Для українських компаній це ЄДРПОУ, для іноземних код їхньої країни.</summary>
     public string? IdCode { get; set; }
-    public bool IsIndividual { get; set; }
 
     public DateOnly SubmittedOn { get; set; }
     public DateOnly RegisteredOn { get; set; }
@@ -75,7 +76,6 @@ public class Monopoly : IRegisterRecord
     [JsonIgnore] public string Key { get; set; } = "";
 
     public string? Edrpou { get; set; }
-    public bool IsIndividual { get; set; }
     public string Name { get; set; } = "";
     [JsonIgnore] public string SearchName { get; set; } = "";
     public string Location { get; set; } = "";

@@ -8,7 +8,6 @@ namespace Energoreestr.Registers;
 public record MonopolyRow(
     int? Number,
     string? Edrpou,
-    bool IsIndividual,
     string Name,
     string Location,
     string Activity,
@@ -18,7 +17,8 @@ public record MonopolyRow(
     public string Key => $"{Edrpou ?? Name}|{Activity}|{Territory}";
 }
 
-public record MonopolyFile(List<MonopolyRow> Rows, List<RowIssue> Issues, int TotalRows);
+/// <param name="SoleProprietors">Скільки записів про підприємців пропущено, див. <see cref="SoleProprietor"/>.</param>
+public record MonopolyFile(List<MonopolyRow> Rows, List<RowIssue> Issues, int TotalRows, int SoleProprietors);
 
 /// <summary>
 /// Розбирає реєстри природних монополій (енергетика, тепло і вода). Формат у них
@@ -37,7 +37,7 @@ public static class MonopolyParser
         var rows = new List<MonopolyRow>();
         var issues = new List<RowIssue>();
         var seen = new HashSet<string>();
-        int total = 0;
+        int total = 0, soleProprietors = 0;
 
         foreach (var record in records.Skip(1))
         {
@@ -60,16 +60,31 @@ public static class MonopolyParser
 
             string name = OneLine(f[2]);
             string rawCode = f[1].Trim();
-            string key = rawCode.Length > 0 ? rawCode : name;
+            string activity = OneLine(f[4]), territory = OneLine(f[5]);
 
-            string? edrpou = null;
-            bool isIndividual = false;
-
-            if (rawCode.Length == 10 && rawCode.All(char.IsAsciiDigit) && LooksLikePersonName(name))
+            // у підприємця в колонці коду РНОКПП, у назві ім'я, а місцезнаходження
+            // це його адреса. Такий запис рахуємо, але не зберігаємо
+            bool taxNumber = SoleProprietor.IsTaxNumber(rawCode);
+            if (SoleProprietor.IsNamedAsOne(name) || (taxNumber && LooksLikePersonName(name)))
             {
-                // РНОКПП підприємця не зберігаємо
-                isIndividual = true;
-                key = name;
+                issues.AddRange(Names.MixedAlphabetWords(name)
+                    .Select(_ => new RowIssue(record.Line, SoleProprietor.Key, IssueCodes.MixedAlphabet, null)));
+                // повтор шукаємо по тому, що є у файлі, але сам ключ лишається в пам'яті
+                if (seen.Add($"{rawCode}|{name}|{activity}|{territory}"))
+                    soleProprietors++;
+                else
+                    issues.Add(new RowIssue(record.Line, SoleProprietor.Key, IssueCodes.DuplicateKey, null));
+                continue;
+            }
+
+            // десять цифр, як у РНОКПП, бувають і в записі організації. Назву організації
+            // лишаємо, а сам код ні: він має вигляд податкового номера людини
+            string key = rawCode.Length > 0 && !taxNumber ? rawCode : name;
+            string? edrpou = null;
+
+            if (taxNumber)
+            {
+                issues.Add(new RowIssue(record.Line, key, IssueCodes.TaxNumberInOrganisation, null));
             }
             else if (Edrpou.Normalize(rawCode) is { } code)
             {
@@ -88,9 +103,7 @@ public static class MonopolyParser
             foreach (var word in Names.MixedAlphabetWords(name))
                 issues.Add(new RowIssue(record.Line, key, IssueCodes.MixedAlphabet, word));
 
-            var row = new MonopolyRow(
-                number, edrpou, isIndividual, name,
-                OneLine(f[3]), OneLine(f[4]), OneLine(f[5]));
+            var row = new MonopolyRow(number, edrpou, name, OneLine(f[3]), activity, territory);
 
             // одна компанія може мати кілька записів (різні види діяльності чи області),
             // але повністю однакові рядки це вже повтор
@@ -103,18 +116,13 @@ public static class MonopolyParser
             rows.Add(row);
         }
 
-        return new MonopolyFile(rows, issues, total);
+        return new MonopolyFile(rows, issues, total, soleProprietors);
     }
 
-    // Десять цифр у колонці коду бувають і в організацій, коли код набрали з помилкою.
-    // Підприємець записаний або з позначкою "фізична особа-підприємець", або просто
-    // як прізвище, ім'я, по батькові: два-чотири слова без лапок.
+    // Десять цифр у колонці коду бувають і в організацій. Підприємця без позначки
+    // «ФОП» видно з назви: це прізвище, ім'я, по батькові, два-чотири слова без лапок.
     private static bool LooksLikePersonName(string name)
     {
-        if (name.StartsWith("ФІЗИЧНА ОСОБА", StringComparison.OrdinalIgnoreCase)
-            || name.StartsWith("ФОП ", StringComparison.OrdinalIgnoreCase))
-            return true;
-
         var words = name.Split(' ');
         return words.Length is >= 2 and <= 4
             && words.All(w => w.All(c => char.IsLetter(c) || c is '-' or '\'' or '’' or 'ʼ'));

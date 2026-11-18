@@ -36,19 +36,16 @@ public class SiteExportTests(ApiFixture app) : IClassFixture<ApiFixture>
     }
 
     [Fact]
-    public async Task Individuals_are_left_out()
+    public async Task Sole_proprietors_are_only_counted()
     {
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<RegistryDb>();
-        int individuals = db.Participants.Count(p => p.IsIndividual) + db.Monopolies.Count(m => m.IsIndividual);
 
         var data = await SiteExport.BuildAsync(db);
 
-        Assert.True(individuals > 0, "у зразках має бути хоча б один підприємець");
-        Assert.Equal(individuals, data.IndividualsSkipped);
-        Assert.Equal(
-            db.Participants.Count(p => !p.IsIndividual),
-            data.Companies.Sum(c => c.Wholesale.Count));
+        // по три вигадані підприємці в зразках оптового ринку і тепла й води
+        Assert.Equal(6, data.SoleProprietors);
+        Assert.Equal(db.Participants.Count(), data.Companies.Sum(c => c.Wholesale.Count));
     }
 
     [Fact]

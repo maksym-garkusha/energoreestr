@@ -24,11 +24,11 @@ public record ParticipantRow(
     string? Lei,
     string? Vat,
     string? IdCode,
-    bool IsIndividual,
     string? Website,
     string? InsideInfoUrl);
 
-public record WholesaleFile(List<ParticipantRow> Rows, List<RowIssue> Issues, int TotalRows);
+/// <param name="SoleProprietors">Скільки записів про підприємців пропущено, див. <see cref="SoleProprietor"/>.</param>
+public record WholesaleFile(List<ParticipantRow> Rows, List<RowIssue> Issues, int TotalRows, int SoleProprietors);
 
 /// <summary>
 /// Розбирає файл registry-opt-ua-*.csv.
@@ -70,6 +70,7 @@ public static partial class WholesaleParser
         var rows = new List<ParticipantRow>();
         var issues = new List<RowIssue>();
         var seen = new HashSet<string>();
+        int soleProprietors = 0;
 
         // перший запис це заголовок
         foreach (var record in records.Skip(1))
@@ -96,14 +97,25 @@ public static partial class WholesaleParser
                 continue;
             }
 
-            if (repaired.Kind == RepairKind.Rearranged)
-                issues.Add(new RowIssue(record.Line, key, IssueCodes.RowRearranged, null));
-            if (repaired.Kind == RepairKind.Ambiguous)
-                issues.Add(new RowIssue(record.Line, key, IssueCodes.RowAmbiguous, null));
+            string name = f[ColName];
+            string country = f[ColCountry];
+
+            // підприємця впізнаємо до того, як щось записати: у зауваженнях до його
+            // рядка не буде ні коду реєстрації, ні значень з файлу
+            bool soleProprietor = SoleProprietor.IsNamedAsOne(f[ColLegalForm])
+                || SoleProprietor.IsNamedAsOne(name)
+                || (country == Ukraine && SoleProprietor.IsTaxNumber(f[ColIdCode]));
+            string issueKey = soleProprietor ? SoleProprietor.Key : key;
+
+            void Flag(string code, string? value) =>
+                issues.Add(new RowIssue(record.Line, issueKey, code, soleProprietor ? null : value));
+
+            if (repaired.Kind == RepairKind.Rearranged) Flag(IssueCodes.RowRearranged, null);
+            if (repaired.Kind == RepairKind.Ambiguous) Flag(IssueCodes.RowAmbiguous, null);
 
             if (!seen.Add(key))
             {
-                issues.Add(new RowIssue(record.Line, key, IssueCodes.DuplicateKey, key));
+                Flag(IssueCodes.DuplicateKey, key);
                 continue;
             }
 
@@ -114,7 +126,7 @@ public static partial class WholesaleParser
                 if (value == "null" || value.Length == 0) return null;
                 if (value == "-")
                 {
-                    issues.Add(new RowIssue(record.Line, key, IssueCodes.DashPlaceholder, null));
+                    Flag(IssueCodes.DashPlaceholder, null);
                     return null;
                 }
                 return value;
@@ -126,84 +138,72 @@ public static partial class WholesaleParser
                 if (TryDate(excludedText, out var date, out bool hasTime))
                 {
                     excluded = date;
-                    if (hasTime) issues.Add(new RowIssue(record.Line, key, IssueCodes.DateFormat, excludedText));
+                    if (hasTime) Flag(IssueCodes.DateFormat, excludedText);
                 }
                 else
                 {
-                    issues.Add(new RowIssue(record.Line, key, IssueCodes.DateFormat, excludedText));
+                    Flag(IssueCodes.DateFormat, excludedText);
                 }
             }
 
-            string name = f[ColName];
-            string country = f[ColCountry];
             foreach (var word in Names.MixedAlphabetWords(name).Concat(Names.MixedAlphabetWords(country)))
-                issues.Add(new RowIssue(record.Line, key, IssueCodes.MixedAlphabet, word));
+                Flag(IssueCodes.MixedAlphabet, word);
 
             string? eic = Value(ColEic);
             if (eic is not null)
             {
                 if (!Eic.HasValidFormat(eic))
-                    issues.Add(new RowIssue(record.Line, key, IssueCodes.EicFormat, eic));
+                    Flag(IssueCodes.EicFormat, eic);
                 else if (!Eic.IsValid(eic))
-                    issues.Add(new RowIssue(record.Line, key, IssueCodes.EicChecksum, eic));
+                    Flag(IssueCodes.EicChecksum, eic);
             }
 
             string? bic = Value(ColBic);
             if (bic is not null && !BicPattern().IsMatch(bic.Replace(" ", "")))
-                issues.Add(new RowIssue(record.Line, key, IssueCodes.BicFormat, bic));
+                Flag(IssueCodes.BicFormat, bic);
 
             string? lei = Value(ColLei);
             if (lei is not null && !LeiPattern().IsMatch(lei))
-                issues.Add(new RowIssue(record.Line, key, IssueCodes.LeiFormat, lei));
+                Flag(IssueCodes.LeiFormat, lei);
 
             string? idCode = Value(ColIdCode);
-            bool isIndividual = false;
-            if (country == Ukraine && idCode is not null)
+            if (country == Ukraine && idCode is not null && !soleProprietor)
             {
-                if (idCode.Length == 10 && idCode.All(char.IsAsciiDigit))
+                if (Edrpou.Normalize(idCode) is { } edrpou)
                 {
-                    // 10 цифр це РНОКПП фізичної особи-підприємця. Податковий номер
-                    // людини в базу не кладемо, лишаємо тільки позначку
-                    isIndividual = true;
-                    idCode = null;
-                }
-                else if (Edrpou.Normalize(idCode) is { } edrpou)
-                {
-                    if (edrpou != idCode)
-                        issues.Add(new RowIssue(record.Line, key, IssueCodes.EdrpouLeadingZeros, idCode));
-                    if (!Edrpou.IsValid(edrpou))
-                        issues.Add(new RowIssue(record.Line, key, IssueCodes.EdrpouChecksum, idCode));
+                    if (edrpou != idCode) Flag(IssueCodes.EdrpouLeadingZeros, idCode);
+                    if (!Edrpou.IsValid(edrpou)) Flag(IssueCodes.EdrpouChecksum, idCode);
                     idCode = edrpou;
                 }
                 else
                 {
-                    issues.Add(new RowIssue(record.Line, key, IssueCodes.IdCodeFormat, idCode));
+                    Flag(IssueCodes.IdCodeFormat, idCode);
                 }
             }
 
             string? website = Value(ColWebsite);
             string? insideInfo = Value(ColInsideInfo);
             if (website is not null && !LooksLikeUrl(website))
-                issues.Add(new RowIssue(record.Line, key, IssueCodes.UrlFormat, website));
+                Flag(IssueCodes.UrlFormat, website);
             // часто це та сама адреса, що й сайт: двічі про одне не пишемо
             if (insideInfo is not null && insideInfo != website && !LooksLikeUrl(insideInfo))
-                issues.Add(new RowIssue(record.Line, key, IssueCodes.UrlFormat, insideInfo));
+                Flag(IssueCodes.UrlFormat, insideInfo);
 
-            // у підприємця адреса це зазвичай домашня адреса, а номер платника ПДВ
-            // збігається з РНОКПП, тому їх теж не зберігаємо
-            string? address = isIndividual ? null : Value(ColAddress);
-            string? zip = isIndividual ? null : Value(ColZip);
-            string? vat = isIndividual ? null : Value(ColVat);
+            if (soleProprietor)
+            {
+                soleProprietors++;
+                continue;
+            }
 
             rows.Add(new ParticipantRow(
                 number, key, submitted, registered, excluded,
                 name, f[ColLegalForm],
-                address, Value(ColSettlement), zip, country,
-                eic, bic, lei, vat, idCode, isIndividual,
+                Value(ColAddress), Value(ColSettlement), Value(ColZip), country,
+                eic, bic, lei, Value(ColVat), idCode,
                 website, insideInfo));
         }
 
-        return new WholesaleFile(rows, issues, records.Count - 1);
+        return new WholesaleFile(rows, issues, records.Count - 1, soleProprietors);
     }
 
     // Якою має бути кожна колонка. Перевірки навмисно м'які: вони потрібні,

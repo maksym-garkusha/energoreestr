@@ -11,11 +11,19 @@ public class WholesaleParserTests
     private static List<string> IssuesOf(string ecrbCode) =>
         File.Issues.Where(i => i.Key == ecrbCode).Select(i => i.Code).ToList();
 
+    private static readonly string[] Lines = Fixture.Text("wholesale-sample.csv").Split("\r\n");
+
+    private static string Header => Lines[0];
+
+    private static string Line(int number) => Lines.Single(l => l.StartsWith(number + ","));
+
     [Fact]
     public void Reads_every_row_of_the_sample()
     {
-        Assert.Equal(17, File.TotalRows);
-        Assert.Equal(17, File.Rows.Count);
+        // 19 записів, з них три про вигаданих підприємців
+        Assert.Equal(19, File.TotalRows);
+        Assert.Equal(16, File.Rows.Count);
+        Assert.Equal(3, File.SoleProprietors);
         Assert.DoesNotContain(File.Issues, i => i.Code == IssueCodes.RowUnreadable);
     }
 
@@ -139,12 +147,48 @@ public class WholesaleParserTests
     }
 
     [Fact]
-    public void Tax_number_of_a_sole_proprietor_is_not_kept()
+    public void Sole_proprietors_are_counted_but_not_kept()
     {
-        var row = Row(9001);
+        Assert.DoesNotContain(File.Rows, r => r.Number is 9001 or 9003 or 9004);
 
-        Assert.True(row.IsIndividual);
-        Assert.Null(row.IdCode);
+        string rows = string.Join('\n', File.Rows);
+        foreach (var trace in Fixture.SoleProprietorTraces)
+            Assert.DoesNotContain(trace, rows);
+    }
+
+    [Fact]
+    public void Issues_on_a_sole_proprietor_row_keep_only_the_line()
+    {
+        var issues = File.Issues.Where(i => i.Key == SoleProprietor.Key).ToList();
+
+        // у рядку 9003 EIC малими літерами, у 9004 латинська A в імені
+        Assert.Contains(issues, i => i.Code == IssueCodes.EicFormat);
+        Assert.Contains(issues, i => i.Code == IssueCodes.MixedAlphabet);
+        Assert.All(issues, i => Assert.Null(i.Value));
+
+        string all = string.Join('\n', File.Issues);
+        foreach (var trace in Fixture.SoleProprietorTraces)
+            Assert.DoesNotContain(trace, all);
+    }
+
+    [Theory]
+    [InlineData("1234567899")]
+    [InlineData("123 456 7899")]
+    [InlineData("123-456-7899")]
+    [InlineData("1234567899.")]
+    public void Ten_digits_in_a_ukrainian_record_mark_a_sole_proprietor_whatever_the_name(string code)
+    {
+        // назва й форма як в організації: підприємця видно тільки з коду
+        string line = Line(9001)
+            .Replace("ФІЗИЧНА ОСОБА-ПІДПРИЄМЕЦЬ ТЕСТОВИЙ ТЕСТ ТЕСТОВИЧ", "ВИГАДАНЕ ТОВАРИСТВО")
+            .Replace("Фізична особа-підприємець", "Товариство з обмеженою відповідальністю")
+            .Replace("1234567890", code);
+
+        var file = WholesaleParser.Parse(Header + "\r\n" + line + "\r\n");
+
+        Assert.Empty(file.Rows);
+        Assert.Equal(1, file.SoleProprietors);
+        Assert.DoesNotContain(file.Issues, i => i.Value is not null);
     }
 
     [Fact]
@@ -162,7 +206,7 @@ public class WholesaleParserTests
 
         var file = WholesaleParser.Parse(text + firstRow + "\r\n");
 
-        Assert.Equal(17, file.Rows.Count);
+        Assert.Equal(16, file.Rows.Count);
         Assert.Contains(file.Issues, i => i.Code == IssueCodes.DuplicateKey && i.Key == "ECRB-UA-20231019-001");
     }
 }

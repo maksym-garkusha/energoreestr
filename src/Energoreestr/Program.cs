@@ -61,7 +61,7 @@ using (var scope = app.Services.CreateScope())
     {
         string dir = args.Length > 1 ? args[1] : "site";
         var summary = await SiteExport.WriteAsync(db, dir);
-        Console.WriteLine($"{summary.Companies} компаній записано в {Path.Combine(dir, SiteExport.FileName)}, підприємців пропущено: {summary.IndividualsSkipped}");
+        Console.WriteLine($"{summary.Companies} компаній записано в {Path.Combine(dir, SiteExport.FileName)}, записів про підприємців у файлах: {summary.SoleProprietors}, у базу вони не потрапляють");
         return 0;
     }
 }

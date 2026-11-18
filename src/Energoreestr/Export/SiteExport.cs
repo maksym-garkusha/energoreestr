@@ -25,14 +25,15 @@ public record SiteMonopoly(string Dataset, string Activity, string Territory, st
 
 public record SiteIssue(string Dataset, int Line, string Code, string? Value);
 
+/// <param name="SoleProprietors">Скільки записів про підприємців є в останніх файлах. Самих записів у базі немає.</param>
 public record SiteData(
     DateTime GeneratedAt,
     List<DatasetStatus> Datasets,
     List<DatasetQuality> Quality,
-    int IndividualsSkipped,
+    int SoleProprietors,
     List<SiteCompany> Companies);
 
-public record ExportSummary(int Companies, int IndividualsSkipped);
+public record ExportSummary(int Companies, int SoleProprietors);
 
 /// <summary>
 /// Складає все, що потрібно сторінці пошуку, в один JSON. Сторінка статична,
@@ -55,7 +56,7 @@ public static class SiteExport
         Directory.CreateDirectory(directory);
         await using var file = File.Create(Path.Combine(directory, FileName));
         await JsonSerializer.SerializeAsync(file, data, Json, ct);
-        return new ExportSummary(data.Companies.Count, data.IndividualsSkipped);
+        return new ExportSummary(data.Companies.Count, data.SoleProprietors);
     }
 
     public static async Task<SiteData> BuildAsync(RegistryDb db, CancellationToken ct = default)
@@ -64,12 +65,9 @@ public static class SiteExport
         var monopolies = await db.Monopolies.AsNoTracking().ToListAsync(ct);
         var issues = await db.Issues.AsNoTracking().ToListAsync(ct);
 
-        // підприємців на сторінку не виносимо: це люди, а не компанії
-        int individuals = participants.Count(p => p.IsIndividual) + monopolies.Count(m => m.IsIndividual);
-
         var groups = new Dictionary<string, Draft>();
 
-        foreach (var p in participants.Where(p => !p.IsIndividual))
+        foreach (var p in participants)
         {
             // українські компанії зводимо за ЄДРПОУ, решту лишаємо окремими записами
             // у кількох записах замість ЄДРПОУ стоїть дев'ятизначний податковий номер
@@ -83,7 +81,7 @@ public static class SiteExport
             draft.IssueKeys.Add(p.EcrbCode);
         }
 
-        foreach (var m in monopolies.Where(m => !m.IsIndividual))
+        foreach (var m in monopolies)
         {
             string groupKey = m.Edrpou ?? "name:" + m.Dataset + ":" + m.SearchName;
             var draft = Get(groups, groupKey, m.Edrpou, m.Name);
@@ -121,11 +119,12 @@ public static class SiteExport
                 found));
         }
 
+        var quality = await QualityApi.Summary(db, ct);
         return new SiteData(
             DateTime.UtcNow,
             await DatasetsApi.List(db, ct),
-            await QualityApi.Summary(db, ct),
-            individuals,
+            quality,
+            quality.Sum(q => q.SoleProprietors),
             companies.OrderBy(c => c.Name, StringComparer.Ordinal).ToList());
     }
 

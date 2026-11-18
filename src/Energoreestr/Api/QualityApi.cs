@@ -7,9 +7,11 @@ namespace Energoreestr.Api;
 
 public record IssueCount(string Code, string Description, int Count);
 
+/// <param name="ImportedRows">Скільки записів лежить у базі.</param>
+/// <param name="SoleProprietors">Записи про підприємців: у файлі вони є, у базі ні.</param>
 public record DatasetQuality(
     string Dataset, string FileName, DateTime PublishedAt,
-    int TotalRows, int ImportedRows, List<IssueCount> Issues);
+    int TotalRows, int ImportedRows, int SoleProprietors, List<IssueCount> Issues);
 
 public record CodeCheck(string Code, string Normalized, bool Valid, string? Note);
 
@@ -49,7 +51,7 @@ public static class QualityApi
 
             result.Add(new DatasetQuality(
                 snapshot.Dataset, snapshot.FileName, snapshot.PublishedAt,
-                snapshot.TotalRows, snapshot.ImportedRows, issues));
+                snapshot.TotalRows, snapshot.ImportedRows, snapshot.SoleProprietors, issues));
         }
         return result;
     }

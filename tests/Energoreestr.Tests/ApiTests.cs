@@ -14,11 +14,11 @@ namespace Energoreestr.Tests;
 /// </summary>
 public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"energoreestr-test-{Guid.NewGuid():N}.db");
+    public string DbPath { get; } = Path.Combine(Path.GetTempPath(), $"energoreestr-test-{Guid.NewGuid():N}.db");
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseSetting("ConnectionStrings:Registry", $"Data Source={_dbPath}");
+        builder.UseSetting("ConnectionStrings:Registry", $"Data Source={DbPath}");
         builder.UseSetting("Import:IntervalHours", "0");
     }
 
@@ -32,13 +32,15 @@ public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
             Fixture.Bytes("wholesale-sample.csv"));
         await importer.ImportFileAsync(Datasets.Find(Datasets.MonopoliesEnergy)!, "energy-sample.csv", published,
             Fixture.Bytes("energy-sample.csv"));
+        await importer.ImportFileAsync(Datasets.Find(Datasets.MonopoliesHeatWater)!, "heat-water-sample.csv", published,
+            Fixture.Bytes("heat-water-sample.csv"));
     }
 
     public new async Task DisposeAsync()
     {
         await base.DisposeAsync();
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        File.Delete(_dbPath);
+        File.Delete(DbPath);
     }
 }
 
@@ -83,7 +85,7 @@ public class ApiTests(ApiFixture app) : IClassFixture<ApiFixture>
         Assert.Equal(1, excluded.GetProperty("total").GetInt32());
 
         var page = await GetJson("/api/participants?page=2&pageSize=5");
-        Assert.Equal(17, page.GetProperty("total").GetInt32());
+        Assert.Equal(16, page.GetProperty("total").GetInt32());
         Assert.Equal(5, page.GetProperty("items").GetArrayLength());
         Assert.Equal(2, page.GetProperty("pageNumber").GetInt32());
     }
@@ -141,7 +143,9 @@ public class ApiTests(ApiFixture app) : IClassFixture<ApiFixture>
         var summary = await GetJson("/api/quality");
 
         var wholesale = summary.EnumerateArray().Single(d => d.GetProperty("dataset").GetString() == "wholesale");
-        Assert.Equal(17, wholesale.GetProperty("totalRows").GetInt32());
+        Assert.Equal(19, wholesale.GetProperty("totalRows").GetInt32());
+        Assert.Equal(16, wholesale.GetProperty("importedRows").GetInt32());
+        Assert.Equal(3, wholesale.GetProperty("soleProprietors").GetInt32());
 
         var first = wholesale.GetProperty("issues")[0];
         Assert.True(first.GetProperty("count").GetInt32() > 0);
