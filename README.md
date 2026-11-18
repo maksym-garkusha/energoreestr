@@ -67,7 +67,7 @@
 
 ## Запуск
 
-Потрібен [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). Базу встановлювати не треба, SQLite це один файл поруч із програмою.
+Потрібен [.NET 11 SDK](https://dotnet.microsoft.com/download/dotnet/11.0). .NET 11 це STS-випуск, але за чинною політикою Microsoft його підтримка закінчується 14 листопада 2028 року, того самого дня, що й у .NET 10 LTS. Базу встановлювати не треба, SQLite це один файл поруч із програмою.
 
 ```bash
 git clone https://github.com/maksym-garkusha/energoreestr.git
