@@ -31,6 +31,9 @@ jobs:
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: '11.0.x'
+      # серед тестів є звірка хешів CSP: зі старим хешем сторінка не запустила б свій скрипт
+      - name: Test
+        run: dotnet test -c Release
       - name: Import registers
         working-directory: src/Energoreestr
         run: dotnet run -c Release -- import
