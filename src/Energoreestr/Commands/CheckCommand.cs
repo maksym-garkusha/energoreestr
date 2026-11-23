@@ -27,14 +27,37 @@ public static class CheckCommand
             return 2;
         }
 
-        var content = await File.ReadAllBytesAsync(options.Path, ct);
-        var (report, codes) = options.Register is { } def
-            ? (RegisterCheck.Run(def, content), RegisterCheck.Codes)
-            : (FileCheck.Run(content), CheckCodes.All);
+        if (new FileInfo(options.Path).Length > MaxBytes)
+        {
+            await error.WriteLineAsync("Файл більший за 1 ГБ, такий команда не перевіряє: розділіть його на кілька менших.");
+            return 2;
+        }
 
-        await output.WriteAsync(options.Json ? ReportJson.Write(report, codes) + Environment.NewLine : ReportText.Write(report, codes));
-        return ReportGroups.ExitCode(report, codes, options.Strict);
+        try
+        {
+            var content = await File.ReadAllBytesAsync(options.Path, ct);
+            var (report, codes) = options.Register is { } def
+                ? (RegisterCheck.Run(def, content), RegisterCheck.Codes)
+                : (FileCheck.Run(content), CheckCodes.All);
+
+            await output.WriteAsync(options.Json ? ReportJson.Write(report, codes) + Environment.NewLine : ReportText.Write(report, codes));
+            return ReportGroups.ExitCode(report, codes, options.Strict);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            await error.WriteLineAsync("Не вдалося прочитати файл: немає доступу або його відкрито в іншій програмі.");
+            return 2;
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Текст винятку не друкуємо: у ньому буває шматок файлу, а стек людині нічого не скаже
+            await error.WriteLineAsync("Не вдалося перевірити файл через помилку в програмі. Якщо можете, повідомте про це в issues репозиторію.");
+            return 2;
+        }
     }
+
+    // увесь файл читається в пам'ять, тож понад це команда його не бере
+    private const long MaxBytes = 1L << 30;
 
     private record Options(string Path, bool Json, bool Strict, DatasetDef? Register);
 

@@ -8,14 +8,25 @@ namespace Energoreestr.Check;
 /// <summary>Один прохід перевірки одного файлу. Стан тримаємо в полях, щоб методи лишалися малими.</summary>
 internal sealed class FileChecker(Decoded decoded, DateOnly today)
 {
-    // довших значень не буває навіть в адресах; таке поле означає незакриті лапки
+    // довших значень не буває навіть в адресах; таке поле означає зламаний рядок
     private const int MaxField = 100_000;
     // скільки рядків з однаковою кількістю полів досить, щоб судити про колонки лише за ними
     private const int MinAlignedRows = 5;
+    // більше колонок буває лише тоді, коли знак між колонками визначено неправильно
+    public const int MaxColumns = 1000;
+    // на кожен вид зауважень зберігаємо стільки, далі лише рахуємо: інакше великий файл з'їсть пам'ять
+    public const int MaxPerCode = 1000;
+    // назва колонки довша за це вже не назва, а дані
+    private const int MaxHeaderCell = 200;
+    // у звіті назви колонок обрізаємо, щоб довга назва не забила екран
+    private const int MaxName = 60;
 
     private readonly string text = decoded.Text!;
-    private readonly List<Finding> findings = [.. decoded.Findings];
+    private readonly List<Finding> findings = [];
+    private readonly Dictionary<string, int> totals = [];
     private readonly HashSet<string> seen = [];
+    // записи зі зламаними лапками чи надто довгим полем: їх не перевіряємо зовсім
+    private readonly HashSet<CsvRecord> broken = [];
 
     private char delimiter;
     private List<CsvRecord> data = [];
@@ -34,28 +45,51 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
 
     public CheckReport Run()
     {
+        foreach (var finding in decoded.Findings) Note(finding);
         var records = Read();
         if (records.Count == 0) return CheckReport.Unreadable(FileCheck.Empty);
+        if (records.Any(r => r.Fields.Length > MaxColumns)) return CheckReport.Unreadable(FileCheck.TooManyColumns);
 
         ReadHeader(records);
         DescribeColumns();
         foreach (var row in data) CheckRow(row);
         CheckColumns();
 
-        var columns = Enumerable.Range(0, width).Select(c => new ColumnProfile(c, names[c], kinds[c], filled[c])).ToList();
+        var columns = Enumerable.Range(0, width).Select(c => new ColumnProfile(c, Shorten(names[c]), kinds[c], filled[c])).ToList();
         var profile = new FileProfile(decoded.Encoding, delimiter, hasHeader, columns);
-        return new CheckReport(data.Count, findings, personalRows, profile);
+        return new CheckReport(data.Count, findings, personalRows, profile, Totals: totals);
+    }
+
+    private static string Shorten(string name) => name.Length <= MaxName ? name : name[..(MaxName - 1)] + "…";
+
+    // кожне зауваження проходить тут: перші MaxPerCode зберігаємо, решту лише рахуємо
+    private void Note(Finding finding)
+    {
+        int count = totals.GetValueOrDefault(finding.Code) + 1;
+        totals[finding.Code] = count;
+        if (count <= MaxPerCode) findings.Add(finding);
     }
 
     private List<CsvRecord> Read()
     {
         char? detected = Delimiters.Detect(text);
-        if (detected is null) findings.Add(new(CheckCodes.SingleColumn, 0));
+        if (detected is null) Note(new(CheckCodes.SingleColumn, 0));
         delimiter = detected ?? ',';
 
         var records = CsvReader.Read(text, delimiter, out int? unclosed);
-        int? swallowed = unclosed ?? records.FirstOrDefault(r => r.Fields.Any(f => f.Length > MaxField))?.Line;
-        if (swallowed is int line) findings.Add(new(CheckCodes.UnclosedQuote, line));
+        foreach (var record in records)
+        {
+            if (record.Line == unclosed && record == records[^1])
+            {
+                Note(new(CheckCodes.UnclosedQuote, record.Line));
+                broken.Add(record);
+            }
+            else if (record.Fields.Any(f => f.Length > MaxField))
+            {
+                Note(new(CheckCodes.ValueTooLong, record.Line));
+                broken.Add(record);
+            }
+        }
         return records;
     }
 
@@ -64,14 +98,17 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         var first = records[0];
         width = first.Fields.Length;
         headerLine = first.Line;
-        names = [.. first.Fields.Select(f => f.Trim())];
+        names = [.. first.Fields.Select(f => Cells.Clean(f))];
         data = records.Skip(1).ToList();
         hasHeader = true;
         kinds = GuessKinds();
 
-        if (!FirstRowLooksLikeData(first)) return;
+        if (!FirstRowLooksLikeData(first) && !HeaderLooksPersonal(first) && first.Fields.All(f => f.Length <= MaxHeaderCell)
+            && !(NoTypedColumns() && FirstRowLooksLikeTheRest(first)))
+            return;
 
-        findings.Add(new(CheckCodes.HeaderMissing, first.Line));
+        // назв колонок тоді не показуємо ніде, а перший рядок перевіряємо як дані
+        Note(new(CheckCodes.HeaderMissing, first.Line));
         hasHeader = false;
         names = new string[width];
         Array.Fill(names, "");
@@ -88,10 +125,40 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         {
             if (kinds[c] is ColumnKind.Unknown or ColumnKind.Text) continue;
             typed++;
-            if (FitsKind(first.Fields[c].Trim(), kinds[c])) fits++;
+            if (FitsKind(Cells.Clean(first.Fields[c]), kinds[c])) fits++;
         }
         return typed > 0 && fits * 2 >= typed;
     }
+
+    private bool NoTypedColumns() => kinds.All(k => k is ColumnKind.Unknown or ColumnKind.Text);
+
+    // ті самі ознаки персональних даних, що й для рядків з даними
+    private bool HeaderLooksPersonal(CsvRecord first) =>
+        first.Fields.Select(f => Cells.Clean(f)).Where(v => v.Length > 0).Any(v =>
+            SoleProprietor.IsNamedAsOne(v) || Cells.IsPlausibleTaxNumber(v, today) || Cells.ContainsTaxNumber(v, today))
+        || Enumerable.Range(0, width).Any(c => kinds[c] == ColumnKind.Edrpou && SoleProprietor.IsTaxNumber(first.Fields[c]));
+
+    // Для таблиці з самого тексту: перший рядок схожий на решту, якщо в половині колонок,
+    // де значення мають «@», кому чи крапку, ці самі знаки є і в першому рядку. Справжні
+    // назви колонок («Адреса», «Email») таких знаків майже не мають
+    private bool FirstRowLooksLikeTheRest(CsvRecord first)
+    {
+        var rows = SampleRows();
+        int marked = 0, same = 0;
+        for (int c = 0; c < width; c++)
+        {
+            var values = Values(rows, c);
+            if (values.Count == 0) continue;
+            string usual = values.GroupBy(Marks).OrderByDescending(g => g.Count()).First().Key;
+            if (usual.Length == 0) continue;
+            marked++;
+            if (Marks(Cells.Clean(first.Fields[c])) == usual) same++;
+        }
+        return marked > 0 && same * 2 >= marked;
+    }
+
+    private static string Marks(string value) =>
+        (value.Contains('@') ? "@" : "") + (value.Contains(',') ? "," : "") + (value.Contains('.') ? "." : "");
 
     private static bool FitsKind(string value, ColumnKind kind) => kind switch
     {
@@ -120,20 +187,20 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
     // колонки впізнаємо за рядками, де значення стоять на своїх місцях, якщо таких досить
     private List<CsvRecord> SampleRows()
     {
-        var rows = data.Where(r => !IsSection(r)).ToList();
+        var rows = data.Where(r => !IsSection(r) && !broken.Contains(r)).ToList();
         var aligned = rows.Where(IsAligned).ToList();
         return aligned.Count >= MinAlignedRows ? aligned : rows;
     }
 
     private static List<string> Values(IEnumerable<CsvRecord> rows, int column) =>
         rows.Where(r => column < r.Fields.Length)
-            .Select(r => r.Fields[column].Trim())
+            .Select(r => Cells.Clean(r.Fields[column]))
             .Where(v => v.Length > 0 && !Cells.IsPlaceholder(v))
             .ToList();
 
     private void DescribeColumns()
     {
-        var rows = data.Where(r => !IsSection(r) && IsAligned(r)).ToList();
+        var rows = data.Where(r => !IsSection(r) && IsAligned(r) && !broken.Contains(r)).ToList();
         empty = new bool[width];
         codeLike = new bool[width];
         phone = new bool[width];
@@ -143,7 +210,7 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         for (int c = 0; c < width; c++)
         {
             var values = Values(rows, c);
-            empty[c] = names[c].Length == 0 && rows.All(r => c >= r.Fields.Length || r.Fields[c].Trim().Length == 0);
+            empty[c] = names[c].Length == 0 && rows.All(r => c >= r.Fields.Length || Cells.Clean(r.Fields[c]).Length == 0);
             codeLike[c] = kinds[c] == ColumnKind.Edrpou || ColumnKinds.IsCodeHeader(names[c]) || TaxNumbersColumn(values);
             phone[c] = ColumnKinds.IsPhoneHeader(names[c]);
             usualDate[c] = Usual(values.Select(Dates.PatternOf));
@@ -162,26 +229,29 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         values.Where(v => v is not null).GroupBy(v => v!.Value).OrderByDescending(g => g.Count()).Select(g => (T?)g.Key).FirstOrDefault();
 
     private bool IsAligned(CsvRecord row) =>
-        row.Fields.Length <= width || row.Fields.Skip(width).All(f => f.Trim().Length == 0);
+        row.Fields.Length <= width || row.Fields.Skip(width).All(f => Cells.Clean(f).Length == 0);
 
     // рядок-заголовок посеред таблиці: заповнена одна клітинка з трьох і більше
     private bool IsSection(CsvRecord row) =>
-        width >= 3 && row.Fields.Count(f => f.Trim().Length > 0) == 1;
+        width >= 3 && row.Fields.Count(f => Cells.Clean(f).Length > 0) == 1;
 
     private void CheckRow(CsvRecord row)
     {
+        if (broken.Contains(row)) return;
         if (IsSection(row))
         {
-            findings.Add(new(CheckCodes.SectionRows, row.Line));
+            Note(new(CheckCodes.SectionRows, row.Line));
+            // у такому рядку теж буває ім'я підприємця
+            MarkPersonal(row, aligned: true);
             return;
         }
 
         bool aligned = IsAligned(row);
-        if (!aligned) findings.Add(new(CheckCodes.UnquotedDelimiter, row.Line));
-        else if (row.Fields.Length < width) findings.Add(new(CheckCodes.MissingFields, row.Line));
+        if (!aligned) Note(new(CheckCodes.UnquotedDelimiter, row.Line));
+        else if (row.Fields.Length < width) Note(new(CheckCodes.MissingFields, row.Line));
 
-        if (!seen.Add(string.Join('\u001f', row.Fields.Select(f => f.Trim()))))
-            findings.Add(new(CheckCodes.DuplicateRow, row.Line));
+        if (!seen.Add(string.Join('\u001f', row.Fields.Select(f => Cells.Clean(f)))))
+            Note(new(CheckCodes.DuplicateRow, row.Line));
 
         bool personal = MarkPersonal(row, aligned);
         bool garbled = false;
@@ -199,11 +269,11 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
     /// <param name="Column">null, якщо значення не на своєму місці і колонку не визначити.</param>
     private record Cell(int Line, int? Column, string Raw, bool Personal)
     {
-        public string Value { get; } = Raw.Trim();
+        public string Value { get; } = Cells.Clean(Raw);
     }
 
     private void Add(string code, Cell cell, string? value = null, string? note = null) =>
-        findings.Add(new(code, cell.Line, cell.Column, cell.Personal ? null : value, note));
+        Note(new(code, cell.Line, cell.Column, cell.Personal || value is null || !Cells.IsDisplayable(value) ? null : value, note));
 
     // У рядку з ознаками персональних даних значень не показуємо взагалі: ні кодів, ні назв
     private bool MarkPersonal(CsvRecord row, bool aligned)
@@ -211,14 +281,14 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         int? soleProprietor = null, taxNumber = null;
         for (int c = 0; c < row.Fields.Length; c++)
         {
-            string value = row.Fields[c].Trim();
+            string value = Cells.Clean(row.Fields[c]);
             if (value.Length == 0) continue;
             soleProprietor ??= SoleProprietor.IsNamedAsOne(value) ? c : null;
             taxNumber ??= LooksLikeTaxNumber(value, aligned && c < width ? c : null) ? c : null;
         }
 
-        if (soleProprietor is int s) findings.Add(new(CheckCodes.PersonalSoleProprietor, row.Line, aligned ? s : null));
-        if (taxNumber is int t) findings.Add(new(CheckCodes.PersonalTaxNumber, row.Line, aligned ? t : null));
+        if (soleProprietor is int s) Note(new(CheckCodes.PersonalSoleProprietor, row.Line, aligned ? s : null));
+        if (taxNumber is int t) Note(new(CheckCodes.PersonalTaxNumber, row.Line, aligned ? t : null));
         bool personal = soleProprietor is not null || taxNumber is not null;
         if (personal) personalRows++;
         return personal;
@@ -229,9 +299,10 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
     // десять цифр бувають і в номерах документів
     private bool LooksLikeTaxNumber(string value, int? column)
     {
-        if (column is int c && codeLike[c]) return SoleProprietor.IsTaxNumber(value);
+        if (column is int c && codeLike[c]) return SoleProprietor.IsTaxNumber(value) || Cells.ContainsTaxNumber(value, today);
         if (column is int other && (phone[other] || kinds[other] is not (ColumnKind.Text or ColumnKind.Unknown))) return false;
-        return Cells.IsPlausibleTaxNumber(value, today);
+        // і окреме число, і номер серед тексту: «РНОКПП 3012345678», «3012345678 (Петренко)»
+        return Cells.IsPlausibleTaxNumber(value, today) || Cells.ContainsTaxNumber(value, today);
     }
 
     private void CheckAlignedCell(Cell cell, ColumnKind kind)
@@ -369,12 +440,12 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (int c = 0; c < width; c++)
         {
-            if (empty[c]) findings.Add(new(CheckCodes.EmptyColumns, 0, c));
-            if (hasHeader && names[c].Length == 0 && !empty[c]) findings.Add(new(CheckCodes.HeaderEmpty, headerLine, c));
+            if (empty[c]) Note(new(CheckCodes.EmptyColumns, 0, c));
+            if (hasHeader && names[c].Length == 0 && !empty[c]) Note(new(CheckCodes.HeaderEmpty, headerLine, c));
             if (hasHeader && names[c].Length > 0 && !seenNames.Add(names[c]))
-                findings.Add(new(CheckCodes.HeaderDuplicate, headerLine, c));
+                Note(new(CheckCodes.HeaderDuplicate, headerLine, c));
             if (kinds[c] == ColumnKind.Date && usualDate[c] is DatePattern.Dmy or DatePattern.DmyWithTime)
-                findings.Add(new(CheckCodes.DateNotIso, 0, c));
+                Note(new(CheckCodes.DateNotIso, 0, c));
         }
     }
 }

@@ -17,6 +17,7 @@ public static class CheckCodes
     public const string UnquotedDelimiter = "unquoted-delimiter";
     public const string MissingFields = "missing-fields";
     public const string UnclosedQuote = "unclosed-quote";
+    public const string ValueTooLong = "value-too-long";
     public const string EmptyColumns = "empty-columns";
     public const string SectionRows = "section-rows";
     public const string HeaderMissing = "header-missing";
@@ -69,6 +70,7 @@ public static class CheckCodes
         [UnquotedDelimiter] = new(Level.Fix, "У рядку більше значень, ніж назв колонок у першому рядку: схоже, значення з комою (чи іншим знаком, яким розділено колонки) не взято в лапки"),
         [MissingFields] = new(Level.Fix, "У рядку менше значень, ніж назв колонок у першому рядку"),
         [UnclosedQuote] = new(Level.Fix, "Лапки, відкриті в цьому рядку, ніде не закрито, тому решту файлу прочитано як одне значення"),
+        [ValueTooLong] = new(Level.Fix, "У рядку є значення довше за 100 тисяч знаків, тому перевірку цього рядка пропущено"),
         [EmptyColumns] = new(Level.Fix, "Колонки без назви і без жодного значення: схоже, аркуш збережено разом з порожніми клітинками праворуч"),
         [SectionRows] = new(Level.Fix, "Посеред таблиці стоїть рядок з однією заповненою клітинкою (наприклад, назвою області): таке значення краще винести в окрему колонку"),
         [HeaderMissing] = new(Level.Verify, "Перший рядок схожий на дані, а не на назви колонок"),

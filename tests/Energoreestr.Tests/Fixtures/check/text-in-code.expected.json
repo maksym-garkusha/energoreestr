@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Код ЄДРПОУ",
+        "kind": "edrpou",
+        "filled": 10
+      },
+      {
+        "index": 2,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 10
+      }
+    ]
+  },
+  "rows": 11,
+  "summary": {
+    "fix": 1,
+    "verify": 2,
+    "info": 0,
+    "personalDataRows": 0
+  },
+  "groups": [
+    {
+      "code": "unclosed-quote",
+      "level": "fix",
+      "text": "Лапки, відкриті в цьому рядку, ніде не закрито, тому решту файлу прочитано як одне значення",
+      "count": 1,
+      "lines": [
+        12
+      ],
+      "columns": [],
+      "examples": []
+    },
+    {
+      "code": "edrpou-format",
+      "level": "verify",
+      "text": "Значення в колонці кодів ЄДРПОУ не схоже на код",
+      "count": 2,
+      "lines": [
+        10,
+        11
+      ],
+      "columns": [
+        1
+      ],
+      "examples": []
+    }
+  ]
+}

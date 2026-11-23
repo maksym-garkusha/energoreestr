@@ -6,6 +6,14 @@ namespace Energoreestr.Check;
 /// <summary>Як виглядають окремі значення: коди, дати, числа, сліди Excel.</summary>
 public static partial class Cells
 {
+    // Пробіли й невидимі знаки, які обрізаємо по краях значення. Перелік явний, бо .NET і
+    // браузер вважають пробілами трохи різне, а сторінка має рахувати так само, як команда
+    private static readonly char[] Blanks =
+        [' ', '\t', '\n', '\v', '\f', '\r', '\u0085', '\u00A0', '\u1680', '\u2000', '\u2001', '\u2002', '\u2003', '\u2004',
+         '\u2005', '\u2006', '\u2007', '\u2008', '\u2009', '\u200A', '\u2028', '\u2029', '\u202F', '\u205F', '\u3000', '\uFEFF'];
+
+    public static string Clean(string value) => value.Trim(Blanks);
+
     public static bool IsPlaceholder(string value) =>
         value is "-" or "null" or "NULL" or "Null" or "N/A" or "n/a" or "н/д" or "Н/Д";
 
@@ -14,23 +22,39 @@ public static partial class Cells
     public static partial Regex ExcelError();
 
     // 1,23457E+11: так Excel зберігає довге число, і цифри після шостої вже втрачено
-    [GeneratedRegex(@"^-?\d+([.,]\d+)?[Ee]\+\d+$")]
+    [GeneratedRegex(@"^-?[0-9]+([.,][0-9]+)?[Ee]\+[0-9]+$")]
     public static partial Regex Exponent();
 
-    [GeneratedRegex(@"^\d+\.0$")]
+    [GeneratedRegex(@"^[0-9]+\.0$")]
     public static partial Regex TrailingZero();
 
-    [GeneratedRegex(@"^\d+$")]
+    [GeneratedRegex(@"^[0-9]+$")]
     public static partial Regex Digits();
 
-    [GeneratedRegex(@"^\d{2}[A-Za-z][0-9A-Za-z-]{13}$")]
+    [GeneratedRegex(@"^[0-9]{2}[A-Za-z][0-9A-Za-z-]{13}$")]
     public static partial Regex EicShape();
 
-    [GeneratedRegex(@"^UA\d{27}$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^UA[0-9]{27}$", RegexOptions.IgnoreCase)]
     public static partial Regex IbanShape();
 
-    [GeneratedRegex(@"^[-+]?(\d+|\d{1,3}([  ]\d{3})+)([.,]\d+)?$")]
+    [GeneratedRegex(@"^[-+]?([0-9]+|[0-9]{1,3}([  ][0-9]{3})+)([.,][0-9]+)?$")]
     public static partial Regex NumberShape();
+
+    /// <summary>
+    /// Чи можна показати значення в звіті. Лише коротке і схоже на зіпсований код чи дату:
+    /// є хоч одна цифра, а крім цифр лише латинські літери і кілька знаків. Ім'я чи адреса,
+    /// що опинилися в колонці кодів, сюди не пройдуть, навіть набрані латиницею.
+    /// </summary>
+    public static bool IsDisplayable(string value) =>
+        value.Length is > 0 and <= 24 && value.Any(char.IsAsciiDigit) && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '.' or ',' or '+' or ' ' or ':');
+
+    // десять цифр поспіль, не частина довшого числа
+    [GeneratedRegex(@"(?<![0-9])[0-9]{10}(?![0-9])")]
+    private static partial Regex TenDigits();
+
+    /// <summary>Чи є серед тексту («РНОКПП 3012345678») номер, що проходить правило <see cref="IsPlausibleTaxNumber"/>.</summary>
+    public static bool ContainsTaxNumber(string value, DateOnly today) =>
+        TenDigits().Matches(value).Any(m => IsPlausibleTaxNumber(m.Value, today));
 
     public static string Compact(string value) => value.Replace(" ", "").Replace(" ", "");
 
@@ -86,16 +110,16 @@ public enum DatePattern { Iso, IsoWithTime, Dmy, DmyWithTime }
 
 public static partial class Dates
 {
-    [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2})$")]
+    [GeneratedRegex(@"^([0-9]{4}-[0-9]{2}-[0-9]{2})$")]
     private static partial Regex Iso();
 
-    [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(:\d{2})?)$")]
+    [GeneratedRegex(@"^([0-9]{4}-[0-9]{2}-[0-9]{2})[ T]([0-9]{2}:[0-9]{2}(:[0-9]{2})?)$")]
     private static partial Regex IsoWithTime();
 
-    [GeneratedRegex(@"^(\d{2}\.\d{2}\.\d{4})$")]
+    [GeneratedRegex(@"^([0-9]{2}\.[0-9]{2}\.[0-9]{4})$")]
     private static partial Regex Dmy();
 
-    [GeneratedRegex(@"^(\d{2}\.\d{2}\.\d{4}) (\d{2}:\d{2}(:\d{2})?)$")]
+    [GeneratedRegex(@"^([0-9]{2}\.[0-9]{2}\.[0-9]{4}) ([0-9]{2}:[0-9]{2}(:[0-9]{2})?)$")]
     private static partial Regex DmyWithTime();
 
     public static DatePattern? PatternOf(string value)

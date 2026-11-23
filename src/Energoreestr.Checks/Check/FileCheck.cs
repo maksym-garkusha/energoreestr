@@ -9,6 +9,7 @@ public static class FileCheck
     public const string ExcelFile = "Це файл Excel, а не CSV. Збережіть аркуш як «CSV UTF-8» і перевірте ще раз.";
     public const string NotText = "Це не текстовий файл CSV.";
     public const string Empty = "Файл порожній.";
+    public const string TooManyColumns = "У файлі понад 1000 колонок. Найімовірніше, знак між колонками визначено неправильно або це не таблиця.";
     public const string UnknownEncoding = "Не вдалося визначити кодування файлу. Збережіть його як «CSV UTF-8» і перевірте ще раз.";
 
     public static CheckReport Run(byte[] content) => Run(content, DateOnly.FromDateTime(DateTime.Today));
@@ -20,7 +21,7 @@ public static class FileCheck
 
         var decoded = Decoding.Decode(content);
         if (decoded.Text is null) return CheckReport.Unreadable(UnknownEncoding);
-        if (string.IsNullOrWhiteSpace(decoded.Text)) return CheckReport.Unreadable(Empty);
+        if (Cells.Clean(decoded.Text).Length == 0) return CheckReport.Unreadable(Empty);
 
         return new FileChecker(decoded, today).Run();
     }

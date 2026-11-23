@@ -60,6 +60,86 @@ public class CheckPageTests(BrowserFixture browser) : IClassFixture<BrowserFixtu
         await context.DisposeAsync();
     }
 
+    // Головна обіцянка сторінки: worker з blob: успадковує заборону на з'єднання. Перевіряємо не код
+    // сторінки, а сам браузер: worker, який навмисно пробує fetch, importScripts і WebSocket
+    [Fact]
+    public async Task Worker_made_from_a_blob_cannot_reach_the_network()
+    {
+        var (context, page) = await OpenAsync();
+        int served = browser.Site.Requests.Count;
+
+        var results = await page.EvaluateAsync<string[]>(@"async url => {
+          const code = `
+            const results = [];
+            const attempt = async (name, run) => { try { await run(); results.push(name + ' дійшов'); } catch { results.push(name + ' заблоковано'); } };
+            (async () => {
+              await attempt('fetch', () => fetch('${url}probe-fetch'));
+              await attempt('importScripts', async () => importScripts('${url}probe-import.js'));
+              await attempt('WebSocket', () => new Promise((ok, fail) => {
+                const socket = new WebSocket('${url.replace('http', 'ws')}probe-socket');
+                socket.onopen = ok; socket.onerror = fail;
+              }));
+              postMessage(results);
+            })();`;
+          const worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
+          return await new Promise(done => {
+            worker.onmessage = event => done(event.data);
+            setTimeout(() => done(['немає відповіді']), 10000);
+          });
+        }", browser.Site.BaseUrl);
+
+        Assert.Equal(["fetch заблоковано", "importScripts заблоковано", "WebSocket заблоковано"], results);
+        Assert.Equal(served, browser.Site.Requests.Count);
+        await context.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Second_file_chosen_quickly_wins_over_the_first()
+    {
+        var (context, page) = await OpenAsync();
+
+        await page.Locator("#file").SetInputFilesAsync(BrowserFixture.Fixture("heat-water-sample.csv"));
+        await page.Locator("#file").SetInputFilesAsync(BrowserFixture.Fixture("check/clean.csv"));
+        await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("завершено");
+        await page.WaitForTimeoutAsync(1000);
+
+        await Assertions.Expect(page.Locator("#report")).ToContainTextAsync("clean.csv");
+        await Assertions.Expect(page.Locator("#report")).Not.ToContainTextAsync("heat-water-sample.csv");
+        await context.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Long_lists_stop_at_a_thousand_items_with_a_count_of_the_rest()
+    {
+        var (context, page) = await OpenAsync();
+        string csv = "Номер;Код ЄДРПОУ\n" + string.Concat(Enumerable.Range(1, 1200).Select(i => $"{i};{1000000 + i}\n"));
+
+        await page.Locator("#file").SetInputFilesAsync(new FilePayload { Name = "codes.csv", MimeType = "text/csv", Buffer = System.Text.Encoding.UTF8.GetBytes(csv) });
+        await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("завершено");
+        var group = page.Locator("article.group").Filter(new() { HasText = "8 цифр" });
+        await group.Locator("button.more").ClickAsync();
+
+        Assert.Equal(1000, await group.Locator("li").CountAsync());
+        await Assertions.Expect(group).ToContainTextAsync("і ще 200");
+        await context.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Hostile_shapes_of_a_file_end_in_a_clear_answer()
+    {
+        var (context, page) = await OpenAsync();
+
+        var columns = System.Text.Encoding.UTF8.GetBytes(new string(';', 200_000) + "\n");
+        await page.Locator("#file").SetInputFilesAsync(new FilePayload { Name = "columns.csv", MimeType = "text/csv", Buffer = columns });
+        await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("понад 1000 колонок");
+
+        // довгий рядок з майже-маркером підприємця раніше перевірявся квадратичний час
+        var markers = System.Text.Encoding.UTF8.GetBytes("Найменування;Код\n" + string.Concat(Enumerable.Repeat("ФІЗИЧН ", 30_000)) + ";1\n");
+        await page.Locator("#file").SetInputFilesAsync(new FilePayload { Name = "markers.csv", MimeType = "text/csv", Buffer = markers });
+        await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("завершено", new() { Timeout = 10000 });
+        await context.DisposeAsync();
+    }
+
     [Fact]
     public async Task Check_works_with_the_network_switched_off()
     {

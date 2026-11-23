@@ -32,9 +32,13 @@ jobs:
         with:
           dotnet-version: '11.0.x'
       # серед тестів є звірка хешів CSP: зі старим хешем сторінка не запустила б свій скрипт
-      # тести в браузері йдуть у tests.yml, тут досить звірки хешів CSP і правил перевірки
       - name: Test
         run: dotnet test tests/Energoreestr.Tests -c Release
+      # сторінку перевірки не викладаємо, доки в Chrome не пройдуть тести на те, що вона нічого не надсилає
+      - name: Browser tests
+        run: |
+          google-chrome --version
+          dotnet test tests/Energoreestr.Browser.Tests -c Release
       - name: Import registers
         working-directory: src/Energoreestr
         run: dotnet run -c Release -- import

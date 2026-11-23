@@ -9,13 +9,13 @@
         "index": 1,
         "name": "Номер",
         "kind": "number",
-        "filled": 9
+        "filled": 8
       },
       {
         "index": 2,
         "name": "Найменування",
         "kind": "text",
-        "filled": 9
+        "filled": 8
       },
       {
         "index": 3,
@@ -39,9 +39,9 @@
   },
   "rows": 10,
   "summary": {
-    "fix": 4,
+    "fix": 3,
     "verify": 0,
-    "info": 1,
+    "info": 0,
     "personalDataRows": 0
   },
   "groups": [
@@ -49,10 +49,9 @@
       "code": "missing-fields",
       "level": "fix",
       "text": "У рядку менше значень, ніж назв колонок у першому рядку",
-      "count": 2,
+      "count": 1,
       "lines": [
-        9,
-        11
+        9
       ],
       "columns": [],
       "examples": []
@@ -77,19 +76,6 @@
         8
       ],
       "columns": [],
-      "examples": []
-    },
-    {
-      "code": "line-break-in-value",
-      "level": "info",
-      "text": "Усередині клітинки є перенесення рядка: частина програм прочитає такий запис як кілька рядків",
-      "count": 1,
-      "lines": [
-        11
-      ],
-      "columns": [
-        2
-      ],
       "examples": []
     }
   ]

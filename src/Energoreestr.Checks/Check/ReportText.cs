@@ -50,7 +50,7 @@ public static class ReportText
 
     private static void WriteGroup(StringBuilder text, ReportGroup group, FileProfile? file)
     {
-        text.AppendLine($"  {group.Info.Text} ({group.Findings.Count})");
+        text.AppendLine($"  {group.Info.Text} ({group.Total})");
 
         var wholeFile = group.Findings.Where(f => f.Line == 0).ToList();
         var columns = wholeFile.Where(f => f.Column is not null).Select(f => f.Column!.Value).Distinct().ToList();
@@ -66,23 +66,25 @@ public static class ReportText
         }
         foreach (var finding in lines.Take(Examples))
             text.AppendLine($"    {Describe(finding, file)}");
-        if (lines.Count > Examples)
-            text.AppendLine($"    і ще {lines.Count - Examples}");
+        int shown = Math.Min(lines.Count, Examples);
+        int rest = group.Total - shown - (group.Findings.Count - lines.Count);
+        if (rest > 0)
+            text.AppendLine($"    і ще {rest}");
     }
 
     public static string Describe(Finding finding, FileProfile? file)
     {
         var where = new StringBuilder($"рядок {finding.Line}");
         if (finding.Column is int column) where.Append(", ").Append(ColumnName(column, file));
-        if (finding.Value is not null) where.Append($": {OneLine(finding.Value)}");
-        if (finding.Note is not null) where.Append($" ({finding.Note})");
+        if (finding.Value is not null) where.Append($": {Visible(finding.Value)}");
+        if (finding.Note is not null) where.Append($" ({Visible(finding.Note)})");
         return where.ToString();
     }
 
     private static string ColumnName(int column, FileProfile? file)
     {
         string? name = file?.HasHeader == true && column < file.Columns.Count ? file.Columns[column].Name : null;
-        return string.IsNullOrWhiteSpace(name) ? $"колонка {column + 1}" : $"колонка {column + 1} «{OneLine(name)}»";
+        return string.IsNullOrEmpty(name) ? $"колонка {column + 1}" : $"колонка {column + 1} «{Visible(name)}»";
     }
 
     // 1 клітинка, 2 клітинки, 5 клітинок, 11 клітинок, 21 клітинка
@@ -114,6 +116,21 @@ public static class ReportText
         _ => $"«{delimiter}»"
     };
 
-    // перенесення всередині значення зламали б рядок звіту
-    private static string OneLine(string value) => value.ReplaceLineEndings(" ");
+    /// <summary>
+    /// Текст з файлу в одному рядку і без керівних знаків: перенесення ламали б звіт, а знаки
+    /// на кшталт ESC чи U+202E (зміна напрямку письма) могли б підмінити те, що бачить людина.
+    /// Такі знаки показуємо записом \uXXXX.
+    /// </summary>
+    public static string Visible(string value)
+    {
+        var text = new StringBuilder(value.Length);
+        foreach (char c in value.ReplaceLineEndings(" "))
+        {
+            var category = char.GetUnicodeCategory(c);
+            bool hidden = c != '\t' && category is System.Globalization.UnicodeCategory.Control or System.Globalization.UnicodeCategory.Format;
+            if (hidden) text.Append($"\\u{(int)c:X4}");
+            else text.Append(c);
+        }
+        return text.ToString();
+    }
 }

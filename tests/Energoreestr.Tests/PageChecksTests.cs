@@ -102,6 +102,20 @@ public class PageChecksTests
         Assert.True(JsonNode.DeepEquals(JsonNode.Parse(expected), JsonNode.Parse(json)), json);
     }
 
+    public static TheoryData<string> GeneratedFiles() => ["many-short-codes", "too-many-columns"];
+
+    [Theory]
+    [MemberData(nameof(GeneratedFiles))]
+    public void Page_keeps_the_same_limits_as_the_command(string name)
+    {
+        var bytes = name == "many-short-codes" ? CheckLimitsTests.ManyShortCodes() : CheckLimitsTests.TooManyColumns();
+        var (json, text) = RunPage(bytes);
+
+        var report = FileCheck.Run(bytes, DateOnly.Parse(Today));
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(ReportJson.Write(report, CheckCodes.All)), JsonNode.Parse(json)), json);
+        Assert.Equal(ReportText.Write(report, CheckCodes.All).ReplaceLineEndings("\n"), text);
+    }
+
     [Fact]
     public void Page_and_command_share_the_same_codes_levels_and_texts()
     {

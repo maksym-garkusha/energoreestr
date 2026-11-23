@@ -33,12 +33,17 @@ public record FileProfile(string Encoding, char Delimiter, bool HasHeader, IRead
 /// <param name="PersonalDataRows">Скільки рядків мають ознаки персональних даних.</param>
 /// <param name="File">Як прочитано файл; null у режимі конкретного реєстру.</param>
 /// <param name="Problem">Чому файл не вдалося перевірити; тоді решта порожня.</param>
+/// <param name="Totals">Скільки всього зауважень кожного виду, якщо збережено не всі.</param>
 public record CheckReport(
     int Rows,
     IReadOnlyList<Finding> Findings,
     int PersonalDataRows,
     FileProfile? File = null,
-    string? Problem = null)
+    string? Problem = null,
+    IReadOnlyDictionary<string, int>? Totals = null)
 {
     public static CheckReport Unreadable(string problem) => new(0, [], 0, Problem: problem);
+
+    public int Total(string code) =>
+        Totals is not null && Totals.TryGetValue(code, out int total) ? total : Findings.Count(f => f.Code == code);
 }

@@ -1,7 +1,11 @@
 namespace Energoreestr.Check;
 
 /// <summary>Зауваження одного виду, як їх показують людині.</summary>
-public record ReportGroup(string Code, CodeInfo Info, IReadOnlyList<Finding> Findings);
+/// <param name="Total">Скільки всього таких зауважень; збережено може бути менше.</param>
+public record ReportGroup(string Code, CodeInfo Info, IReadOnlyList<Finding> Findings, int Total)
+{
+    public bool Truncated => Total > Findings.Count;
+}
 
 public static class ReportGroups
 {
@@ -9,14 +13,14 @@ public static class ReportGroups
     public static List<ReportGroup> Build(CheckReport report, IReadOnlyDictionary<string, CodeInfo> codes) =>
         report.Findings
             .GroupBy(f => f.Code)
-            .Select(g => new ReportGroup(g.Key, codes[g.Key], g.OrderBy(f => f.Line).ThenBy(f => f.Column).ToList()))
+            .Select(g => new ReportGroup(g.Key, codes[g.Key], g.OrderBy(f => f.Line).ThenBy(f => f.Column).ToList(), report.Total(g.Key)))
             .OrderBy(g => g.Info.Level)
-            .ThenByDescending(g => g.Findings.Count)
+            .ThenByDescending(g => g.Total)
             .ThenBy(g => g.Code, StringComparer.Ordinal)
             .ToList();
 
     public static int Count(CheckReport report, IReadOnlyDictionary<string, CodeInfo> codes, Level level) =>
-        report.Findings.Count(f => codes[f.Code].Level == level);
+        report.Findings.Select(f => f.Code).Distinct().Where(code => codes[code].Level == level).Sum(report.Total);
 
     /// <summary>
     /// 0, якщо поправляти нічого; 1, якщо є що поправити (зі strict також що звірити);

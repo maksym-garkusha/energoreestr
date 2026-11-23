@@ -57,12 +57,20 @@ public static class ReportJson
         })])
     };
 
-    private static JsonObject Group(ReportGroup group) => new()
+    private static JsonObject Group(ReportGroup group)
+    {
+        var json = Details(group);
+        // перелік рядків обрізано, але count повний
+        if (group.Truncated) json["truncated"] = true;
+        return json;
+    }
+
+    private static JsonObject Details(ReportGroup group) => new()
     {
         ["code"] = group.Code,
         ["level"] = group.Info.Level.ToString().ToLowerInvariant(),
         ["text"] = group.Info.Text,
-        ["count"] = group.Findings.Count,
+        ["count"] = group.Total,
         ["lines"] = Numbers(group.Findings.Where(f => f.Line > 0).Select(f => f.Line)),
         ["columns"] = Numbers(group.Findings.Where(f => f.Column is not null).Select(f => f.Column!.Value + 1)),
         ["examples"] = new JsonArray([.. group.Findings

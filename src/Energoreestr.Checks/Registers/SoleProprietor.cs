@@ -27,6 +27,7 @@ public static partial class SoleProprietor
     public static bool IsNamedAsOne(string? text) =>
         !string.IsNullOrWhiteSpace(text) && Marker().IsMatch(Names.SearchKey(text));
 
-    [GeneratedRegex(@"(?<!\p{L})ФОП(?!\p{L})|ФІЗИЧН\p{L}*[ -]*ОСОБ")]
+    // кількісники обмежені: на довгому рядку з «ФІЗИЧН» без «ОСОБ» необмежені давали квадратичний час
+    [GeneratedRegex(@"(?:^|[^\p{L}])ФОП(?:[^\p{L}]|$)|ФІЗИЧН\p{L}{0,4}[ -]{0,3}ОСОБ")]
     private static partial Regex Marker();
 }

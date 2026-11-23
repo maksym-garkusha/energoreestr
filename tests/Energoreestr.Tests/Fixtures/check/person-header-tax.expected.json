@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": false,
+    "columns": [
+      {
+        "index": 1,
+        "name": "",
+        "kind": "text",
+        "filled": 9
+      },
+      {
+        "index": 2,
+        "name": "",
+        "kind": "edrpou",
+        "filled": 9
+      },
+      {
+        "index": 3,
+        "name": "",
+        "kind": "date",
+        "filled": 9
+      }
+    ]
+  },
+  "rows": 9,
+  "summary": {
+    "fix": 0,
+    "verify": 2,
+    "info": 0,
+    "personalDataRows": 1
+  },
+  "groups": [
+    {
+      "code": "header-missing",
+      "level": "verify",
+      "text": "Перший рядок схожий на дані, а не на назви колонок",
+      "count": 1,
+      "lines": [
+        1
+      ],
+      "columns": [],
+      "examples": []
+    },
+    {
+      "code": "personal-tax-number",
+      "level": "verify",
+      "text": "Десять цифр, схожих на РНОКПП (податковий номер людини): перед публікацією варто переконатися, що ці дані можна оприлюднювати. Значення не показано",
+      "count": 1,
+      "lines": [
+        1
+      ],
+      "columns": [
+        2
+      ],
+      "examples": []
+    }
+  ]
+}

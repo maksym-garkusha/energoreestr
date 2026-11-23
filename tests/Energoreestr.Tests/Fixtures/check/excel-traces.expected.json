@@ -94,13 +94,7 @@
       "columns": [
         5
       ],
-      "examples": [
-        {
-          "line": 6,
-          "column": 5,
-          "value": "#N/A"
-        }
-      ]
+      "examples": []
     },
     {
       "code": "excel-exponent",
