@@ -59,6 +59,59 @@ public class CheckCommandTests
     }
 
     [Theory]
+    [InlineData("check/personal-data.csv")]
+    [InlineData("heat-water-sample.csv")]
+    [InlineData("wholesale-sample.csv")]
+    public async Task General_check_shows_no_trace_of_invented_sole_proprietors_in_text_or_json(string fixture)
+    {
+        var (_, text, _) = await Run(Fixture.Path(fixture));
+        var (_, json, _) = await Run("--json", Fixture.Path(fixture));
+
+        Assert.Contains("Рядків з ознаками персональних даних", text);
+        Assert.DoesNotContain("\"personalDataRows\": 0", json);
+        foreach (var trace in Fixture.SoleProprietorTraces)
+        {
+            Assert.DoesNotContain(trace, text);
+            Assert.DoesNotContain(trace, json);
+        }
+    }
+
+    [Theory]
+    [InlineData("check/clean.csv", false, 0)]
+    [InlineData("check/utf8-no-bom.csv", false, 0)]   // лише «до відома»
+    [InlineData("check/no-header.csv", false, 0)]     // лише «варто звірити»
+    [InlineData("check/no-header.csv", true, 1)]
+    [InlineData("check/excel-traces.csv", false, 1)]
+    public async Task General_check_exit_code_follows_the_most_serious_finding(string fixture, bool strict, int expected)
+    {
+        string[] args = strict ? ["--strict", Fixture.Path(fixture)] : [Fixture.Path(fixture)];
+
+        var (code, _, _) = await Run(args);
+
+        Assert.Equal(expected, code);
+    }
+
+    [Fact]
+    public async Task Excel_workbook_is_refused_with_a_hint_and_exit_code_2()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"check-{Guid.NewGuid():N}.xlsx");
+        await File.WriteAllBytesAsync(path, [0x50, 0x4B, 0x03, 0x04, 0x14, 0x00]);
+        try
+        {
+            var (code, text, _) = await Run(path);
+            var (_, json, _) = await Run("--json", path);
+
+            Assert.Equal(2, code);
+            Assert.Contains("CSV UTF-8", text);
+            Assert.Contains("\"problem\"", json);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Theory]
     [InlineData]
     [InlineData("--register", "wholesale")]
     [InlineData("--register", "no-such-register", "file.csv")]

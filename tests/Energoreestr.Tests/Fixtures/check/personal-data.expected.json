@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Номер",
+        "kind": "number",
+        "filled": 9
+      },
+      {
+        "index": 2,
+        "name": "Код ЄДРПОУ",
+        "kind": "edrpou",
+        "filled": 9
+      },
+      {
+        "index": 3,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 9
+      },
+      {
+        "index": 4,
+        "name": "Адреса",
+        "kind": "text",
+        "filled": 9
+      },
+      {
+        "index": 5,
+        "name": "Дата реєстрації",
+        "kind": "date",
+        "filled": 9
+      }
+    ]
+  },
+  "rows": 9,
+  "summary": {
+    "fix": 2,
+    "verify": 7,
+    "info": 0,
+    "personalDataRows": 4
+  },
+  "groups": [
+    {
+      "code": "date-invalid",
+      "level": "fix",
+      "text": "Такої дати не існує",
+      "count": 1,
+      "lines": [
+        7
+      ],
+      "columns": [
+        5
+      ],
+      "examples": []
+    },
+    {
+      "code": "mixed-alphabet",
+      "level": "fix",
+      "text": "В одному слові змішано українські й латинські літери: на око цього не видно, але пошук такий запис не знайде",
+      "count": 1,
+      "lines": [
+        8
+      ],
+      "columns": [
+        3
+      ],
+      "examples": [
+        {
+          "line": 8,
+          "column": 3,
+          "note": "слова 1, 4, латинські літери: A I"
+        }
+      ]
+    },
+    {
+      "code": "personal-tax-number",
+      "level": "verify",
+      "text": "Десять цифр, схожих на РНОКПП (податковий номер людини): перед публікацією варто переконатися, що ці дані можна оприлюднювати. Значення не показано",
+      "count": 4,
+      "lines": [
+        7,
+        8,
+        9,
+        10
+      ],
+      "columns": [
+        2
+      ],
+      "examples": []
+    },
+    {
+      "code": "personal-sole-proprietor",
+      "level": "verify",
+      "text": "Згадано фізичну особу-підприємця: перед публікацією варто переконатися, що ці дані можна оприлюднювати. Значення не показано",
+      "count": 3,
+      "lines": [
+        7,
+        8,
+        10
+      ],
+      "columns": [
+        3
+      ],
+      "examples": []
+    }
+  ]
+}

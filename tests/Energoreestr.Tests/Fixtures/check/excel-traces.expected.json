@@ -1,0 +1,157 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Номер",
+        "kind": "number",
+        "filled": 8
+      },
+      {
+        "index": 2,
+        "name": "Код ЄДРПОУ",
+        "kind": "edrpou",
+        "filled": 8
+      },
+      {
+        "index": 3,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 7
+      },
+      {
+        "index": 4,
+        "name": "Дата рішення",
+        "kind": "date",
+        "filled": 8
+      },
+      {
+        "index": 5,
+        "name": "Сума, грн",
+        "kind": "text",
+        "filled": 8
+      }
+    ]
+  },
+  "rows": 8,
+  "summary": {
+    "fix": 5,
+    "verify": 0,
+    "info": 1,
+    "personalDataRows": 0
+  },
+  "groups": [
+    {
+      "code": "edrpou-leading-zeros",
+      "level": "fix",
+      "text": "Код ЄДРПОУ коротший за 8 цифр: схоже, нулі на початку загубилися, бо колонку збережено як число",
+      "count": 1,
+      "lines": [
+        2
+      ],
+      "columns": [
+        2
+      ],
+      "examples": [
+        {
+          "line": 2,
+          "column": 2,
+          "value": "2249063"
+        }
+      ]
+    },
+    {
+      "code": "excel-date-serial",
+      "level": "fix",
+      "text": "Замість дати записано її порядковий номер у Excel (наприклад, 45231)",
+      "count": 1,
+      "lines": [
+        5
+      ],
+      "columns": [
+        4
+      ],
+      "examples": [
+        {
+          "line": 5,
+          "column": 4,
+          "value": "45231"
+        }
+      ]
+    },
+    {
+      "code": "excel-error",
+      "level": "fix",
+      "text": "У клітинці лишилася помилка формули Excel (#N/A, #REF! тощо)",
+      "count": 1,
+      "lines": [
+        6
+      ],
+      "columns": [
+        5
+      ],
+      "examples": [
+        {
+          "line": 6,
+          "column": 5,
+          "value": "#N/A"
+        }
+      ]
+    },
+    {
+      "code": "excel-exponent",
+      "level": "fix",
+      "text": "Число збережено у скороченому вигляді на кшталт 1,23E\u002B11: частину цифр із файлу вже не відновити",
+      "count": 1,
+      "lines": [
+        4
+      ],
+      "columns": [
+        2
+      ],
+      "examples": [
+        {
+          "line": 4,
+          "column": 2,
+          "value": "1,23457E\u002B11"
+        }
+      ]
+    },
+    {
+      "code": "excel-trailing-zero",
+      "level": "fix",
+      "text": "До коду дописано «.0»: колонку збережено як дробове число",
+      "count": 1,
+      "lines": [
+        3
+      ],
+      "columns": [
+        2
+      ],
+      "examples": [
+        {
+          "line": 3,
+          "column": 2,
+          "value": "4350033.0"
+        }
+      ]
+    },
+    {
+      "code": "placeholder-value",
+      "level": "info",
+      "text": "Замість порожньої клітинки стоїть «-», «null» чи подібна заглушка",
+      "count": 1,
+      "lines": [
+        7
+      ],
+      "columns": [
+        3
+      ],
+      "examples": []
+    }
+  ]
+}

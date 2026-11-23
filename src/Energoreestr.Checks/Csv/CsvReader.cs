@@ -12,7 +12,10 @@ public record CsvRecord(int Line, string[] Fields);
 /// </summary>
 public static class CsvReader
 {
-    public static List<CsvRecord> Read(string text, char delimiter)
+    public static List<CsvRecord> Read(string text, char delimiter) => Read(text, delimiter, out _);
+
+    /// <param name="unclosedQuoteLine">Рядок, де відкрито лапки, які так і не закрилися до кінця файлу.</param>
+    public static List<CsvRecord> Read(string text, char delimiter, out int? unclosedQuoteLine)
     {
         var records = new List<CsvRecord>();
         var fields = new List<string>();
@@ -86,6 +89,8 @@ public static class CsvReader
                 fieldStarted = true;
             }
         }
+
+        unclosedQuoteLine = inQuotes ? recordLine : null;
 
         // останній рядок без перенесення в кінці
         if (field.Length > 0 || fields.Count > 0)

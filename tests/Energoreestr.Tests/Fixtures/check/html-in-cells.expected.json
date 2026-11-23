@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Номер",
+        "kind": "number",
+        "filled": 6
+      },
+      {
+        "index": 2,
+        "name": "\u003Cimg src=x onerror=alert(1)\u003E",
+        "kind": "text",
+        "filled": 6
+      },
+      {
+        "index": 3,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 6
+      },
+      {
+        "index": 4,
+        "name": "Код ЄДРПОУ",
+        "kind": "edrpou",
+        "filled": 6
+      }
+    ]
+  },
+  "rows": 6,
+  "summary": {
+    "fix": 1,
+    "verify": 0,
+    "info": 0,
+    "personalDataRows": 0
+  },
+  "groups": [
+    {
+      "code": "mixed-alphabet",
+      "level": "fix",
+      "text": "В одному слові змішано українські й латинські літери: на око цього не видно, але пошук такий запис не знайде",
+      "count": 1,
+      "lines": [
+        6
+      ],
+      "columns": [
+        2
+      ],
+      "examples": [
+        {
+          "line": 6,
+          "column": 2,
+          "note": "слово 1, латинські літери: b"
+        }
+      ]
+    }
+  ]
+}

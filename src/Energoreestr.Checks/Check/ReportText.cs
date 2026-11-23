@@ -53,8 +53,9 @@ public static class ReportText
         text.AppendLine($"  {group.Info.Text} ({group.Findings.Count})");
 
         var wholeFile = group.Findings.Where(f => f.Line == 0).ToList();
-        if (wholeFile.Any(f => f.Column is not null))
-            text.AppendLine($"    колонки {ReportGroups.Ranges(wholeFile.Where(f => f.Column is not null).Select(f => f.Column!.Value))}");
+        var columns = wholeFile.Where(f => f.Column is not null).Select(f => f.Column!.Value).Distinct().ToList();
+        if (columns.Count > 0)
+            text.AppendLine($"    {(columns.Count == 1 ? "колонка" : "колонки")} {ReportGroups.Ranges(columns)}");
 
         var lines = group.Findings.Where(f => f.Line > 0).ToList();
         foreach (var finding in lines.Take(Examples))

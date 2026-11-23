@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Номер",
+        "kind": "number",
+        "filled": 12
+      },
+      {
+        "index": 2,
+        "name": "Номер ліцензії",
+        "kind": "number",
+        "filled": 12
+      },
+      {
+        "index": 3,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 12
+      },
+      {
+        "index": 4,
+        "name": "Сума, грн",
+        "kind": "number",
+        "filled": 12
+      },
+      {
+        "index": 5,
+        "name": "Телефон",
+        "kind": "number",
+        "filled": 12
+      },
+      {
+        "index": 6,
+        "name": "Кількість",
+        "kind": "number",
+        "filled": 12
+      }
+    ]
+  },
+  "rows": 12,
+  "summary": {
+    "fix": 0,
+    "verify": 0,
+    "info": 0,
+    "personalDataRows": 0
+  },
+  "groups": []
+}

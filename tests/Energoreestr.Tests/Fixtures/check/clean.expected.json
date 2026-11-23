@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Номер",
+        "kind": "number",
+        "filled": 6
+      },
+      {
+        "index": 2,
+        "name": "Код ЄДРПОУ",
+        "kind": "edrpou",
+        "filled": 6
+      },
+      {
+        "index": 3,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 6
+      },
+      {
+        "index": 4,
+        "name": "EIC",
+        "kind": "eic",
+        "filled": 6
+      },
+      {
+        "index": 5,
+        "name": "Дата реєстрації",
+        "kind": "date",
+        "filled": 6
+      },
+      {
+        "index": 6,
+        "name": "Сума, грн",
+        "kind": "number",
+        "filled": 6
+      },
+      {
+        "index": 7,
+        "name": "IBAN",
+        "kind": "iban",
+        "filled": 6
+      }
+    ]
+  },
+  "rows": 6,
+  "summary": {
+    "fix": 0,
+    "verify": 0,
+    "info": 0,
+    "personalDataRows": 0
+  },
+  "groups": []
+}

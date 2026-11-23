@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Номер",
+        "kind": "number",
+        "filled": 7
+      },
+      {
+        "index": 2,
+        "name": "Код ЄДРПОУ",
+        "kind": "edrpou",
+        "filled": 7
+      },
+      {
+        "index": 3,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 7
+      },
+      {
+        "index": 4,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 7
+      },
+      {
+        "index": 5,
+        "name": "",
+        "kind": "text",
+        "filled": 7
+      },
+      {
+        "index": 6,
+        "name": "Примітка",
+        "kind": "unknown",
+        "filled": 0
+      },
+      {
+        "index": 7,
+        "name": "",
+        "kind": "unknown",
+        "filled": 0
+      },
+      {
+        "index": 8,
+        "name": "",
+        "kind": "unknown",
+        "filled": 0
+      },
+      {
+        "index": 9,
+        "name": "",
+        "kind": "unknown",
+        "filled": 0
+      }
+    ]
+  },
+  "rows": 9,
+  "summary": {
+    "fix": 7,
+    "verify": 1,
+    "info": 0,
+    "personalDataRows": 0
+  },
+  "groups": [
+    {
+      "code": "empty-columns",
+      "level": "fix",
+      "text": "Колонки без назви і без жодного значення: схоже, аркуш збережено разом з порожніми клітинками праворуч",
+      "count": 3,
+      "lines": [],
+      "columns": [
+        7,
+        8,
+        9
+      ],
+      "examples": []
+    },
+    {
+      "code": "section-rows",
+      "level": "fix",
+      "text": "Посеред таблиці стоїть рядок з однією заповненою клітинкою (наприклад, назвою області): таке значення краще винести в окрему колонку",
+      "count": 2,
+      "lines": [
+        2,
+        6
+      ],
+      "columns": [],
+      "examples": []
+    },
+    {
+      "code": "header-duplicate",
+      "level": "fix",
+      "text": "Дві колонки мають однакову назву",
+      "count": 1,
+      "lines": [
+        1
+      ],
+      "columns": [
+        4
+      ],
+      "examples": []
+    },
+    {
+      "code": "header-empty",
+      "level": "fix",
+      "text": "Колонка має дані, але не має назви в першому рядку",
+      "count": 1,
+      "lines": [
+        1
+      ],
+      "columns": [
+        5
+      ],
+      "examples": []
+    },
+    {
+      "code": "duplicate-row",
+      "level": "verify",
+      "text": "Рядок повністю повторює інший рядок файлу",
+      "count": 1,
+      "lines": [
+        10
+      ],
+      "columns": [],
+      "examples": []
+    }
+  ]
+}

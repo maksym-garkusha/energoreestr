@@ -1,0 +1,227 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ",",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Number",
+        "kind": "number",
+        "filled": 19
+      },
+      {
+        "index": 2,
+        "name": "Registration Authority",
+        "kind": "text",
+        "filled": 19
+      },
+      {
+        "index": 3,
+        "name": "Country of Registration Authority",
+        "kind": "text",
+        "filled": 19
+      },
+      {
+        "index": 4,
+        "name": "Date of submission of the form",
+        "kind": "text",
+        "filled": 19
+      },
+      {
+        "index": 5,
+        "name": "Date of registration in the Register",
+        "kind": "date",
+        "filled": 19
+      },
+      {
+        "index": 6,
+        "name": "Registration code (ECRB)",
+        "kind": "date",
+        "filled": 19
+      },
+      {
+        "index": 7,
+        "name": "Name of the Participant",
+        "kind": "text",
+        "filled": 19
+      },
+      {
+        "index": 8,
+        "name": "Legal form",
+        "kind": "text",
+        "filled": 19
+      },
+      {
+        "index": 9,
+        "name": "Address*",
+        "kind": "text",
+        "filled": 18
+      },
+      {
+        "index": 10,
+        "name": "Settlement*",
+        "kind": "text",
+        "filled": 18
+      },
+      {
+        "index": 11,
+        "name": "ZIP Code*",
+        "kind": "text",
+        "filled": 6
+      },
+      {
+        "index": 12,
+        "name": "Country",
+        "kind": "text",
+        "filled": 6
+      },
+      {
+        "index": 13,
+        "name": "EIC code of the Participant",
+        "kind": "text",
+        "filled": 18
+      },
+      {
+        "index": 14,
+        "name": "BIC code of the Participant",
+        "kind": "text",
+        "filled": 16
+      },
+      {
+        "index": 15,
+        "name": "LEI code of the Participant",
+        "kind": "text",
+        "filled": 5
+      },
+      {
+        "index": 16,
+        "name": "VAT Number",
+        "kind": "unknown",
+        "filled": 3
+      },
+      {
+        "index": 17,
+        "name": "Identification code / ITN",
+        "kind": "text",
+        "filled": 12
+      },
+      {
+        "index": 18,
+        "name": "Website of the Participant",
+        "kind": "text",
+        "filled": 16
+      },
+      {
+        "index": 19,
+        "name": "Webpage where inside information are disclosed",
+        "kind": "text",
+        "filled": 17
+      },
+      {
+        "index": 20,
+        "name": "Date of exclusion from the Register",
+        "kind": "text",
+        "filled": 17
+      }
+    ]
+  },
+  "rows": 19,
+  "summary": {
+    "fix": 24,
+    "verify": 4,
+    "info": 0,
+    "personalDataRows": 3
+  },
+  "groups": [
+    {
+      "code": "unquoted-delimiter",
+      "level": "fix",
+      "text": "У рядку більше значень, ніж назв колонок у першому рядку: схоже, значення з комою (чи іншим знаком, яким розділено колонки) не взято в лапки",
+      "count": 19,
+      "lines": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "columns": [],
+      "examples": []
+    },
+    {
+      "code": "mixed-alphabet",
+      "level": "fix",
+      "text": "В одному слові змішано українські й латинські літери: на око цього не видно, але пошук такий запис не знайде",
+      "count": 5,
+      "lines": [
+        9,
+        18,
+        20,
+        24
+      ],
+      "columns": [],
+      "examples": [
+        {
+          "line": 9,
+          "note": "слова 4, 5, 6, 7, латинські літери: I"
+        },
+        {
+          "line": 18,
+          "note": "слово 1, латинські літери: i"
+        },
+        {
+          "line": 20,
+          "note": "слово 1, латинські літери: i"
+        },
+        {
+          "line": 20,
+          "note": "слово 2, латинські літери: i"
+        },
+        {
+          "line": 24,
+          "note": "слово 2, латинські літери: A"
+        }
+      ]
+    },
+    {
+      "code": "personal-sole-proprietor",
+      "level": "verify",
+      "text": "Згадано фізичну особу-підприємця: перед публікацією варто переконатися, що ці дані можна оприлюднювати. Значення не показано",
+      "count": 3,
+      "lines": [
+        22,
+        23,
+        24
+      ],
+      "columns": [],
+      "examples": []
+    },
+    {
+      "code": "personal-tax-number",
+      "level": "verify",
+      "text": "Десять цифр, схожих на РНОКПП (податковий номер людини): перед публікацією варто переконатися, що ці дані можна оприлюднювати. Значення не показано",
+      "count": 1,
+      "lines": [
+        23
+      ],
+      "columns": [],
+      "examples": []
+    }
+  ]
+}

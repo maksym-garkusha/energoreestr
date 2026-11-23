@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ",",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Номер",
+        "kind": "number",
+        "filled": 9
+      },
+      {
+        "index": 2,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 9
+      },
+      {
+        "index": 3,
+        "name": "Місто",
+        "kind": "text",
+        "filled": 8
+      },
+      {
+        "index": 4,
+        "name": "Код ЄДРПОУ",
+        "kind": "edrpou",
+        "filled": 7
+      },
+      {
+        "index": 5,
+        "name": "EIC",
+        "kind": "eic",
+        "filled": 7
+      }
+    ]
+  },
+  "rows": 10,
+  "summary": {
+    "fix": 4,
+    "verify": 0,
+    "info": 1,
+    "personalDataRows": 0
+  },
+  "groups": [
+    {
+      "code": "missing-fields",
+      "level": "fix",
+      "text": "У рядку менше значень, ніж назв колонок у першому рядку",
+      "count": 2,
+      "lines": [
+        9,
+        11
+      ],
+      "columns": [],
+      "examples": []
+    },
+    {
+      "code": "unclosed-quote",
+      "level": "fix",
+      "text": "Лапки, відкриті в цьому рядку, ніде не закрито, тому решту файлу прочитано як одне значення",
+      "count": 1,
+      "lines": [
+        11
+      ],
+      "columns": [],
+      "examples": []
+    },
+    {
+      "code": "unquoted-delimiter",
+      "level": "fix",
+      "text": "У рядку більше значень, ніж назв колонок у першому рядку: схоже, значення з комою (чи іншим знаком, яким розділено колонки) не взято в лапки",
+      "count": 1,
+      "lines": [
+        8
+      ],
+      "columns": [],
+      "examples": []
+    },
+    {
+      "code": "line-break-in-value",
+      "level": "info",
+      "text": "Усередині клітинки є перенесення рядка: частина програм прочитає такий запис як кілька рядків",
+      "count": 1,
+      "lines": [
+        11
+      ],
+      "columns": [
+        2
+      ],
+      "examples": []
+    }
+  ]
+}

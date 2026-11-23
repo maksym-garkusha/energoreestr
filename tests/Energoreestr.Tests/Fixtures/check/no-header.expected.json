@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": false,
+    "columns": [
+      {
+        "index": 1,
+        "name": "",
+        "kind": "number",
+        "filled": 6
+      },
+      {
+        "index": 2,
+        "name": "",
+        "kind": "edrpou",
+        "filled": 6
+      },
+      {
+        "index": 3,
+        "name": "",
+        "kind": "text",
+        "filled": 6
+      },
+      {
+        "index": 4,
+        "name": "",
+        "kind": "date",
+        "filled": 6
+      }
+    ]
+  },
+  "rows": 6,
+  "summary": {
+    "fix": 0,
+    "verify": 1,
+    "info": 0,
+    "personalDataRows": 0
+  },
+  "groups": [
+    {
+      "code": "header-missing",
+      "level": "verify",
+      "text": "Перший рядок схожий на дані, а не на назви колонок",
+      "count": 1,
+      "lines": [
+        1
+      ],
+      "columns": [],
+      "examples": []
+    }
+  ]
+}

@@ -11,7 +11,7 @@ namespace Energoreestr.Commands;
 /// </summary>
 public static class CheckCommand
 {
-    public const string Usage = "Використання: check [--json] [--strict] --register набір файл.csv";
+    public const string Usage = "Використання: check [--json] [--strict] [--register набір] файл.csv";
 
     public static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error, CancellationToken ct = default)
     {
@@ -28,8 +28,9 @@ public static class CheckCommand
         }
 
         var content = await File.ReadAllBytesAsync(options.Path, ct);
-        var report = RegisterCheck.Run(options.Register!, content);
-        var codes = RegisterCheck.Codes;
+        var (report, codes) = options.Register is { } def
+            ? (RegisterCheck.Run(def, content), RegisterCheck.Codes)
+            : (FileCheck.Run(content), CheckCodes.All);
 
         await output.WriteAsync(options.Json ? ReportJson.Write(report, codes) + Environment.NewLine : ReportText.Write(report, codes));
         return ReportGroups.ExitCode(report, codes, options.Strict);
@@ -62,7 +63,7 @@ public static class CheckCommand
             }
         }
 
-        if (path is null || register is null) return false;
+        if (path is null) return false;
         options = new Options(path, json, strict, register);
         return true;
     }

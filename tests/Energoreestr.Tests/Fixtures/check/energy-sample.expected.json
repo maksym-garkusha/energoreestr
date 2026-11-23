@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Number",
+        "kind": "number",
+        "filled": 5
+      },
+      {
+        "index": 2,
+        "name": "Код згідно з ЄДРПОУ суб’єкта господарювання",
+        "kind": "edrpou",
+        "filled": 5
+      },
+      {
+        "index": 3,
+        "name": "Найменування суб\u0027єкта господарювання",
+        "kind": "text",
+        "filled": 5
+      },
+      {
+        "index": 4,
+        "name": "Місце знаходження суб\u0027єкта господарювання (адміністративно-територіальна одиниця)",
+        "kind": "text",
+        "filled": 5
+      },
+      {
+        "index": 5,
+        "name": "Вид господарської діяльності, що провадиться суб’єктом господарювання",
+        "kind": "text",
+        "filled": 5
+      },
+      {
+        "index": 6,
+        "name": "Територія здійснення господарської діяльності суб\u0027єктом господарювання",
+        "kind": "text",
+        "filled": 5
+      }
+    ]
+  },
+  "rows": 5,
+  "summary": {
+    "fix": 4,
+    "verify": 0,
+    "info": 8,
+    "personalDataRows": 0
+  },
+  "groups": [
+    {
+      "code": "edrpou-leading-zeros",
+      "level": "fix",
+      "text": "Код ЄДРПОУ коротший за 8 цифр: схоже, нулі на початку загубилися, бо колонку збережено як число",
+      "count": 4,
+      "lines": [
+        3,
+        4,
+        5,
+        6
+      ],
+      "columns": [
+        2
+      ],
+      "examples": [
+        {
+          "line": 3,
+          "column": 2,
+          "value": "3346331"
+        },
+        {
+          "line": 4,
+          "column": 2,
+          "value": "3351208"
+        },
+        {
+          "line": 5,
+          "column": 2,
+          "value": "3361419"
+        },
+        {
+          "line": 6,
+          "column": 2,
+          "value": "3351912"
+        }
+      ]
+    },
+    {
+      "code": "whitespace",
+      "level": "info",
+      "text": "Зайві пробіли на початку чи в кінці значення або два пробіли поспіль",
+      "count": 8,
+      "lines": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "columns": [
+        3,
+        5,
+        6
+      ],
+      "examples": []
+    }
+  ]
+}

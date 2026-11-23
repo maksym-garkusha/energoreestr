@@ -1,0 +1,213 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Номер",
+        "kind": "number",
+        "filled": 8
+      },
+      {
+        "index": 2,
+        "name": "Код ЄДРПОУ",
+        "kind": "edrpou",
+        "filled": 8
+      },
+      {
+        "index": 3,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 8
+      },
+      {
+        "index": 4,
+        "name": "EIC",
+        "kind": "eic",
+        "filled": 8
+      },
+      {
+        "index": 5,
+        "name": "Дата реєстрації",
+        "kind": "date",
+        "filled": 8
+      },
+      {
+        "index": 6,
+        "name": "Сума, грн",
+        "kind": "number",
+        "filled": 8
+      },
+      {
+        "index": 7,
+        "name": "IBAN",
+        "kind": "iban",
+        "filled": 8
+      }
+    ]
+  },
+  "rows": 8,
+  "summary": {
+    "fix": 4,
+    "verify": 4,
+    "info": 0,
+    "personalDataRows": 0
+  },
+  "groups": [
+    {
+      "code": "date-invalid",
+      "level": "fix",
+      "text": "Такої дати не існує",
+      "count": 1,
+      "lines": [
+        5
+      ],
+      "columns": [
+        5
+      ],
+      "examples": [
+        {
+          "line": 5,
+          "column": 5,
+          "value": "2025-02-30"
+        }
+      ]
+    },
+    {
+      "code": "date-mixed-format",
+      "level": "fix",
+      "text": "Дату записано не в тому вигляді, що більшість дат у цій колонці",
+      "count": 1,
+      "lines": [
+        6
+      ],
+      "columns": [
+        5
+      ],
+      "examples": [
+        {
+          "line": 6,
+          "column": 5,
+          "value": "15.05.2025"
+        }
+      ]
+    },
+    {
+      "code": "eic-format",
+      "level": "fix",
+      "text": "EIC-код не відповідає формату: має бути 16 символів, лише цифри, великі латинські літери і дефіс",
+      "count": 1,
+      "lines": [
+        3
+      ],
+      "columns": [
+        4
+      ],
+      "examples": [
+        {
+          "line": 3,
+          "column": 4,
+          "value": "56x1wlvcejy05whh"
+        }
+      ]
+    },
+    {
+      "code": "mixed-alphabet",
+      "level": "fix",
+      "text": "В одному слові змішано українські й латинські літери: на око цього не видно, але пошук такий запис не знайде",
+      "count": 1,
+      "lines": [
+        9
+      ],
+      "columns": [
+        3
+      ],
+      "examples": [
+        {
+          "line": 9,
+          "column": 3,
+          "note": "слова 2, 3, латинські літери: I"
+        }
+      ]
+    },
+    {
+      "code": "edrpou-checksum",
+      "level": "verify",
+      "text": "Код ЄДРПОУ не проходить перевірку контрольної цифри, варто звірити з ЄДР",
+      "count": 1,
+      "lines": [
+        2
+      ],
+      "columns": [
+        2
+      ],
+      "examples": [
+        {
+          "line": 2,
+          "column": 2,
+          "value": "19365231"
+        }
+      ]
+    },
+    {
+      "code": "eic-checksum",
+      "level": "verify",
+      "text": "EIC-код не проходить перевірку контрольного символу, варто звірити",
+      "count": 1,
+      "lines": [
+        4
+      ],
+      "columns": [
+        4
+      ],
+      "examples": [
+        {
+          "line": 4,
+          "column": 4,
+          "value": "56XT5GLEZJ146S6A"
+        }
+      ]
+    },
+    {
+      "code": "iban-checksum",
+      "level": "verify",
+      "text": "Номер рахунку IBAN не проходить перевірку контрольних цифр, варто звірити",
+      "count": 1,
+      "lines": [
+        8
+      ],
+      "columns": [
+        7
+      ],
+      "examples": [
+        {
+          "line": 8,
+          "column": 7,
+          "value": "UA001999990000000000026001234"
+        }
+      ]
+    },
+    {
+      "code": "number-mixed-separator",
+      "level": "verify",
+      "text": "Дробову частину відокремлено не тим знаком, що в більшості чисел колонки (крапка чи кома)",
+      "count": 1,
+      "lines": [
+        7
+      ],
+      "columns": [
+        6
+      ],
+      "examples": [
+        {
+          "line": 7,
+          "column": 6,
+          "value": "1206,25"
+        }
+      ]
+    }
+  ]
+}

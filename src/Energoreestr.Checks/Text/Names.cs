@@ -62,11 +62,14 @@ public static class Names
         return string.Join(' ', words);
     }
 
+    /// <summary>Чим розділено слова, коли шукаємо змішані абетки.</summary>
+    public static readonly char[] WordSeparators = [' ', '"', '«', '»', '(', ')', ',', '.', '-'];
+
     /// <summary>Слова, де в одному слові змішані кирилиця і латиниця.</summary>
     public static List<string> MixedAlphabetWords(string text)
     {
         var found = new List<string>();
-        foreach (var word in text.Split([' ', '"', '«', '»', '(', ')', ',', '.', '-'], StringSplitOptions.RemoveEmptyEntries))
+        foreach (var word in text.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries))
         {
             if (HasCyrillic(word) && word.Any(IsLatin))
                 found.Add(word);
@@ -87,5 +90,5 @@ public static class Names
 
     private static bool HasCyrillic(string word) => word.Any(c => c >= 'Ѐ' && c <= 'ӿ');
 
-    private static bool IsLatin(char c) => (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    public static bool IsLatin(char c) => (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
