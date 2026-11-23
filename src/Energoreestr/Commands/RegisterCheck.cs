@@ -12,7 +12,8 @@ namespace Energoreestr.Commands;
 public static class RegisterCheck
 {
     public static readonly IReadOnlyDictionary<string, CodeInfo> Codes =
-        IssueCodes.Descriptions.ToDictionary(d => d.Key, d => new CodeInfo(LevelOf(d.Key), d.Value));
+        IssueCodes.Descriptions.Select((d, order) => (d, order))
+            .ToDictionary(x => x.d.Key, x => new CodeInfo(LevelOf(x.d.Key), x.d.Value, Order: x.order));
 
     public static CheckReport Run(DatasetDef def, byte[] content)
     {

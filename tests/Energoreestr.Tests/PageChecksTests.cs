@@ -121,11 +121,13 @@ public class PageChecksTests
     public void Page_and_command_share_the_same_codes_levels_and_texts()
     {
         var codes = Load().Evaluate("JSON.stringify(CODES)").AsString();
+        // порядок теж однаковий: від нього залежить, у якій послідовності йдуть групи
         var page = JsonNode.Parse(codes)!.AsObject()
-            .ToDictionary(p => p.Key, p => (p.Value![0]!.GetValue<string>(), p.Value![1]!.GetValue<string>()));
-        var command = CheckCodes.All.ToDictionary(p => p.Key, p => (p.Value.Level.ToString().ToLowerInvariant(), p.Value.Text));
+            .Select(p => (p.Key, string.Join("|", p.Value!.AsArray().Select(v => v!.GetValue<string>()))));
+        var command = CheckCodes.All.OrderBy(p => p.Value.Order)
+            .Select(p => (p.Key, string.Join("|", p.Value.Level.ToString().ToLowerInvariant(), p.Value.Unit.ToString().ToLowerInvariant(), p.Value.Title, p.Value.Text)));
 
-        Assert.Equal(command.OrderBy(p => p.Key, StringComparer.Ordinal), page.OrderBy(p => p.Key, StringComparer.Ordinal));
+        Assert.Equal(command, page);
     }
 
     [Fact]

@@ -54,13 +54,20 @@
     "fix": 1,
     "verify": 0,
     "info": 0,
+    "findings": {
+      "fix": 1,
+      "verify": 0,
+      "info": 0
+    },
     "personalDataRows": 0
   },
   "groups": [
     {
       "code": "encoding-utf16",
       "level": "fix",
-      "text": "Файл збережено в кодуванні UTF-16 (так Excel зберігає «текст Юнікод»): збережіть його як CSV UTF-8",
+      "title": "Кодування UTF-16",
+      "unit": "file",
+      "text": "Файл збережено в кодуванні UTF-16 (так Excel зберігає «текст Юнікод»). Збережіть його як «CSV UTF-8».",
       "count": 1,
       "lines": [],
       "columns": [],

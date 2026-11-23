@@ -24,7 +24,7 @@ public class CheckPageTests(BrowserFixture browser) : IClassFixture<BrowserFixtu
     private static async Task CheckAsync(IPage page, string fixture)
     {
         await page.Locator("#file").SetInputFilesAsync(BrowserFixture.Fixture(fixture));
-        await page.Locator("#status").Filter(new() { HasTextRegex = new("завершено|Не вдалося|Файл|Це ") })
+        await page.Locator("#status").Filter(new() { HasTextRegex = new("завершено|не перевірено") })
             .WaitForAsync(new() { Timeout = 15000 });
     }
 
@@ -131,12 +131,29 @@ public class CheckPageTests(BrowserFixture browser) : IClassFixture<BrowserFixtu
 
         var columns = System.Text.Encoding.UTF8.GetBytes(new string(';', 200_000) + "\n");
         await page.Locator("#file").SetInputFilesAsync(new FilePayload { Name = "columns.csv", MimeType = "text/csv", Buffer = columns });
-        await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("понад 1000 колонок");
+        await Assertions.Expect(page.Locator("#report")).ToContainTextAsync("понад 1000 колонок");
 
         // довгий рядок з майже-маркером підприємця раніше перевірявся квадратичний час
         var markers = System.Text.Encoding.UTF8.GetBytes("Найменування;Код\n" + string.Concat(Enumerable.Repeat("ФІЗИЧН ", 30_000)) + ";1\n");
         await page.Locator("#file").SetInputFilesAsync(new FilePayload { Name = "markers.csv", MimeType = "text/csv", Buffer = markers });
         await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("завершено", new() { Timeout = 10000 });
+        await context.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task Built_in_example_is_checked_without_any_request()
+    {
+        var (context, page) = await OpenAsync();
+        var requests = new List<string>();
+        context.Request += (_, request) => requests.Add(request.Url);
+
+        await page.GetByRole(AriaRole.Button, new() { Name = "Спробувати на прикладі" }).ClickAsync();
+        await Assertions.Expect(page.Locator("#status")).ToHaveTextAsync("Перевірку завершено.");
+
+        await Assertions.Expect(page.Locator("#report")).ToContainTextAsync("приклад.csv");
+        await Assertions.Expect(page.Locator("#report")).ToContainTextAsync("Загублені нулі в ЄДРПОУ");
+        await Assertions.Expect(page.Locator(".personal")).ToContainTextAsync("Рядків з ознаками персональних даних: 1");
+        Assert.All(requests, url => Assert.StartsWith("blob:", url));
         await context.DisposeAsync();
     }
 
@@ -148,7 +165,8 @@ public class CheckPageTests(BrowserFixture browser) : IClassFixture<BrowserFixtu
 
         await CheckAsync(page, "check/codes-dates-numbers.csv");
 
-        await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("поправити 4, варто звірити 4");
+        await Assertions.Expect(page.Locator(".counter.fix b")).ToHaveTextAsync("4");
+        await Assertions.Expect(page.Locator(".counter.verify b")).ToHaveTextAsync("4");
         await context.DisposeAsync();
     }
 
@@ -188,10 +206,10 @@ public class CheckPageTests(BrowserFixture browser) : IClassFixture<BrowserFixtu
 
         Assert.Contains("персональних даних", screen);
         Assert.Contains("персональних даних", saved);
-        Assert.Matches(@"^perevirka-\d{4}-\d{2}-\d{2}\.txt$", download.SuggestedFilename);
-        // назва файлу видна на екрані, але в збережений звіт не йде
+        Assert.Matches(@"^perevirka-\d{4}-\d{2}-\d{2}-\d{4}\.txt$", download.SuggestedFilename);
+        // назва файлу є і на екрані, і в першому рядку збереженого звіту: це документ людини на її пристрої
         Assert.Contains(Path.GetFileName(fixture), screen);
-        Assert.DoesNotContain(Path.GetFileName(fixture), saved);
+        Assert.StartsWith($"Файл {Path.GetFileName(fixture)}, ", saved);
         foreach (var trace in Traces)
         {
             Assert.DoesNotContain(trace, screen);
@@ -223,14 +241,14 @@ public class CheckPageTests(BrowserFixture browser) : IClassFixture<BrowserFixtu
         var (context, page) = await OpenAsync();
 
         await page.Locator("#file").SetInputFilesAsync(new FilePayload { Name = "таблиця.xlsx", MimeType = "application/zip", Buffer = [0x50, 0x4B, 0x03, 0x04, 0x14, 0x00] });
-        await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("Це файл Excel");
+        await Assertions.Expect(page.Locator("#report")).ToContainTextAsync("Це файл Excel");
 
         string big = Path.Combine(Path.GetTempPath(), $"great-{Guid.NewGuid():N}.csv");
         await using (var stream = File.Create(big)) stream.SetLength(51L * 1024 * 1024);
         try
         {
             await page.Locator("#file").SetInputFilesAsync(big);
-            await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("більший за 50");
+            await Assertions.Expect(page.Locator("#report")).ToContainTextAsync("більший за 50 МБ");
         }
         finally
         {
@@ -248,8 +266,10 @@ public class CheckPageTests(BrowserFixture browser) : IClassFixture<BrowserFixtu
         var chooser = await page.RunAndWaitForFileChooserAsync(() => page.Locator("#pick").PressAsync("Enter"));
         await chooser.SetFilesAsync(BrowserFixture.Fixture("check/clean.csv"));
 
-        await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("зауважень немає");
-        await Assertions.Expect(page.Locator("#report")).ToContainTextAsync("Нічого з переліченого не знайдено");
+        await Assertions.Expect(page.Locator("#status")).ToHaveTextAsync("Перевірку завершено.");
+        await Assertions.Expect(page.Locator("#report")).ToContainTextAsync("Зауважень немає");
+        // після перевірки фокус стоїть на картці підсумку, тож зчитувач екрана одразу її прочитає
+        Assert.True(await page.EvaluateAsync<bool>("document.activeElement.classList.contains('summary')"));
         await context.DisposeAsync();
     }
 
@@ -260,7 +280,7 @@ public class CheckPageTests(BrowserFixture browser) : IClassFixture<BrowserFixtu
 
         await page.GetByRole(AriaRole.Link, new() { Name = "Пошук компанії в реєстрах" }).ClickAsync();
         Assert.Equal(browser.Site.BaseUrl, page.Url);
-        await page.GetByRole(AriaRole.Link, new() { Name = "Перевірити свій файл перед публікацією" }).ClickAsync();
+        await page.GetByRole(AriaRole.Link, new() { Name = "Перевірка CSV-файлу перед публікацією" }).ClickAsync();
         Assert.Equal(browser.Site.BaseUrl + "check/", page.Url);
         await context.DisposeAsync();
     }

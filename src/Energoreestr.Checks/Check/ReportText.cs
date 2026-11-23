@@ -2,16 +2,20 @@ using System.Text;
 
 namespace Energoreestr.Check;
 
-/// <summary>Звіт для людини в терміналі.</summary>
+/// <summary>Звіт для людини: у терміналі (п'ять прикладів на вид) і у файлі, який зберігає сторінка.</summary>
 public static class ReportText
 {
-    // скільки прикладів показувати під кожним видом зауважень, як у звіті про якість
-    private const int Examples = 5;
+    // скільки пунктів показувати під кожним видом зауважень у терміналі, як у звіті про якість
+    public const int Examples = 5;
 
     private static readonly (Level Level, string Title)[] Sections =
-        [(Level.Fix, "Поправити"), (Level.Verify, "Варто звірити"), (Level.Info, "До відома")];
+    [
+        (Level.Fix, "Поправити: без цього програми прочитають файл не так, як задумано"),
+        (Level.Verify, "Варто звірити: може бути помилкою, вирішуєте ви"),
+        (Level.Info, "До відома: не помилка, але корисно знати")
+    ];
 
-    public static string Write(CheckReport report, IReadOnlyDictionary<string, CodeInfo> codes)
+    public static string Write(CheckReport report, IReadOnlyDictionary<string, CodeInfo> codes, int examples = Examples)
     {
         var text = new StringBuilder();
         if (report.Problem is not null)
@@ -35,7 +39,9 @@ public static class ReportText
             var inSection = groups.Where(g => g.Info.Level == level).ToList();
             if (inSection.Count == 0) continue;
             text.AppendLine().AppendLine(title);
-            foreach (var group in inSection) WriteGroup(text, group, report.File);
+            foreach (var group in inSection)
+                foreach (var line in Lines(group, report.File, examples))
+                    text.AppendLine(line);
         }
         return text.ToString();
     }
@@ -51,35 +57,58 @@ public static class ReportText
             : $"Рядків з даними: {rows}, колонок: {file.Columns.Count}, рядка з назвами колонок немає.");
     }
 
-    private static void WriteGroup(StringBuilder text, ReportGroup group, FileProfile? file)
+    /// <summary>Назва виду з кількістю, пояснення і пункти: «рядок 5, колонка 2: «3361661»» або проміжки рядків.</summary>
+    public static List<string> Lines(ReportGroup group, FileProfile? file, int examples)
     {
-        text.AppendLine($"  {group.Info.Text} ({group.Total})");
+        var lines = new List<string> { "  " + Heading(group) };
+        if (group.Info.Title is not null) lines.Add("    " + group.Info.Text);
 
-        var wholeFile = group.Findings.Where(f => f.Line == 0).ToList();
-        var columns = wholeFile.Where(f => f.Column is not null).Select(f => f.Column!.Value).Distinct().ToList();
-        if (columns.Count > 0)
-            text.AppendLine($"    {(columns.Count == 1 ? "колонка" : "колонки")} {ReportGroups.Ranges(columns)}");
+        var wholeFile = group.Findings.Where(f => f.Line == 0 && f.Column is not null).Select(f => f.Column!.Value).Distinct().ToList();
+        if (wholeFile.Count > 0)
+            lines.Add($"    {(wholeFile.Count == 1 ? "колонка" : "колонки")} {ReportGroups.Ranges(wholeFile)}");
 
-        var lines = group.Findings.Where(f => f.Line > 0).ToList();
+        var places = group.Findings.Where(f => f.Line > 0).ToList();
         if (CheckCodes.CountedByColumn.Contains(group.Code))
         {
-            foreach (var column in lines.GroupBy(f => f.Column).OrderBy(g => g.Key))
-                text.AppendLine($"    {(column.Key is int c ? ColumnName(c, file) : "колонку не визначено")}: {Cells(column.Count())}");
-            return;
+            foreach (var column in places.GroupBy(f => f.Column).OrderBy(g => g.Key))
+                lines.Add($"    {(column.Key is int c ? ColumnName(c, file) : "колонку не визначено")}: {Count(column.Count(), Unit.Cell)}");
+            return lines;
         }
-        foreach (var finding in lines.Take(Examples))
-            text.AppendLine($"    {Describe(finding, file)}");
-        int shown = Math.Min(lines.Count, Examples);
-        int rest = group.Total - shown - (group.Findings.Count - lines.Count);
-        if (rest > 0)
-            text.AppendLine($"    і ще {rest}");
+
+        var shown = places.Take(examples).ToList();
+        // без значень сусідні рядки зводимо в проміжки: «рядки 2-31» читається легше за тридцять рядків
+        if (shown.All(f => f.Value is null && f.Note is null))
+            lines.AddRange(Spans(shown, file));
+        else
+            lines.AddRange(shown.Select(f => "    " + Describe(f, file)));
+
+        int rest = group.Total - shown.Count - (group.Findings.Count - places.Count);
+        if (rest > 0) lines.Add($"    і ще {rest}");
+        return lines;
     }
+
+    private static string Heading(ReportGroup group)
+    {
+        string title = group.Info.Title ?? group.Info.Text;
+        return group.Info.Unit == Unit.File ? title : $"{title}: {Count(group.Total, group.Info.Unit)}";
+    }
+
+    private static IEnumerable<string> Spans(List<Finding> findings, FileProfile? file) =>
+        findings.GroupBy(f => f.Column).OrderBy(g => g.Key).Select(g =>
+        {
+            var rows = g.Select(f => f.Line).Distinct().ToList();
+            string what = $"{(rows.Count == 1 ? "рядок" : "рядки")} {Ranges(rows)}";
+            return g.Key is int c ? $"    {ColumnName(c, file)}: {what}" : $"    {what}";
+        });
+
+    private static string Ranges(List<int> rows) => ReportGroups.Ranges(rows.Select(r => r - 1));
 
     public static string Describe(Finding finding, FileProfile? file)
     {
         var where = new StringBuilder($"рядок {finding.Line}");
         if (finding.Column is int column) where.Append(", ").Append(ColumnName(column, file));
-        if (finding.Value is not null) where.Append($": {Visible(finding.Value)}");
+        // у лапках, щоб було видно, де значення закінчується: крапка в «35546472.» теж його частина
+        if (finding.Value is not null) where.Append($": «{Visible(finding.Value)}»");
         if (finding.Note is not null) where.Append($" ({Visible(finding.Note)})");
         return where.ToString();
     }
@@ -90,15 +119,18 @@ public static class ReportText
         return string.IsNullOrEmpty(name) ? $"колонка {column + 1}" : $"колонка {column + 1} «{Visible(name)}»";
     }
 
-    // 1 клітинка, 2 клітинки, 5 клітинок, 11 клітинок, 21 клітинка
-    private static string Cells(int count)
+    // 1 рядок, 2 рядки, 5 рядків, 11 рядків, 21 рядок
+    public static string Count(int count, Unit unit)
     {
         int lastTwo = count % 100, last = count % 10;
-        string word = lastTwo is >= 11 and <= 14 ? "клітинок"
-            : last == 1 ? "клітинка"
-            : last is >= 2 and <= 4 ? "клітинки"
-            : "клітинок";
-        return $"{count} {word}";
+        int form = lastTwo is >= 11 and <= 14 ? 2 : last == 1 ? 0 : last is >= 2 and <= 4 ? 1 : 2;
+        string[] words = unit switch
+        {
+            Unit.Cell => ["клітинка", "клітинки", "клітинок"],
+            Unit.Column => ["колонка", "колонки", "колонок"],
+            _ => ["рядок", "рядки", "рядків"]
+        };
+        return $"{count} {words[form]}";
     }
 
     public static string EncodingName(string encoding) => encoding switch

@@ -39,8 +39,8 @@ public class CheckCommandTests
         // чотири коди без нулів на початку: це треба поправити
         Assert.Equal(1, code);
         Assert.Contains("Поправити", output);
-        Assert.Contains("У коді ЄДРПОУ загублено нулі на початку (4)", output);
-        Assert.Contains("рядок 3: 3346331", output);
+        Assert.Contains("У коді ЄДРПОУ загублено нулі на початку: 4 рядки", output);
+        Assert.Contains("рядок 3: «3346331»", output);
     }
 
     [Fact]

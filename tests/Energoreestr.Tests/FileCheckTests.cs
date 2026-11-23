@@ -269,7 +269,12 @@ public class FileCheckTests
         {
             Assert.DoesNotContain("—", info.Text);
             Assert.DoesNotContain("–", info.Text);
-            Assert.False(info.Text.EndsWith('.'));
+            Assert.EndsWith(".", info.Text);
+            // коротка назва над поясненням: від двох до п'яти слів
+            Assert.InRange(info.Title!.Split(' ').Length, 2, 5);
         });
+        // «схоже» не більше ніж у двох текстах, інакше звіт звучить невпевнено
+        Assert.True(CheckCodes.All.Values.Count(i => i.Text.Contains("схоже", StringComparison.OrdinalIgnoreCase)) <= 2);
+        Assert.Equal(Enumerable.Range(0, CheckCodes.All.Count), CheckCodes.All.Values.Select(i => i.Order).Order());
     }
 }

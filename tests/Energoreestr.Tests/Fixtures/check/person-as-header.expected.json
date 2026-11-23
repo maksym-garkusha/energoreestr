@@ -30,13 +30,20 @@
     "fix": 0,
     "verify": 1,
     "info": 0,
+    "findings": {
+      "fix": 0,
+      "verify": 1,
+      "info": 0
+    },
     "personalDataRows": 0
   },
   "groups": [
     {
       "code": "header-missing",
       "level": "verify",
-      "text": "Перший рядок схожий на дані, а не на назви колонок",
+      "title": "Немає назв колонок",
+      "unit": "row",
+      "text": "Перший рядок схожий на дані, а не на назви колонок. Додайте зверху рядок з назвами.",
       "count": 1,
       "lines": [
         1

@@ -36,6 +36,11 @@
     "fix": 0,
     "verify": 0,
     "info": 0,
+    "findings": {
+      "fix": 0,
+      "verify": 0,
+      "info": 0
+    },
     "personalDataRows": 0
   },
   "groups": []

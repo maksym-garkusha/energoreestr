@@ -9,17 +9,22 @@ public record ReportGroup(string Code, CodeInfo Info, IReadOnlyList<Finding> Fin
 
 public static class ReportGroups
 {
-    /// <summary>Спершу те, що треба поправити, далі за кількістю.</summary>
+    /// <summary>Спершу те, що треба поправити; всередині рівня за причиною, як у таблиці кодів.</summary>
     public static List<ReportGroup> Build(CheckReport report, IReadOnlyDictionary<string, CodeInfo> codes) =>
         report.Findings
             .GroupBy(f => f.Code)
             .Select(g => new ReportGroup(g.Key, codes[g.Key], g.OrderBy(f => f.Line).ThenBy(f => f.Column).ToList(), report.Total(g.Key)))
             .OrderBy(g => g.Info.Level)
-            .ThenByDescending(g => g.Total)
+            .ThenBy(g => g.Info.Order)
             .ThenBy(g => g.Code, StringComparer.Ordinal)
             .ToList();
 
+    /// <summary>Скільки видів зауважень цього рівня: саме це людина бачить у підсумку.</summary>
     public static int Count(CheckReport report, IReadOnlyDictionary<string, CodeInfo> codes, Level level) =>
+        report.Findings.Select(f => f.Code).Distinct().Count(code => codes[code].Level == level);
+
+    /// <summary>Скільки окремих знахідок цього рівня, разом з тими, що не збережено.</summary>
+    public static int Findings(CheckReport report, IReadOnlyDictionary<string, CodeInfo> codes, Level level) =>
         report.Findings.Select(f => f.Code).Distinct().Where(code => codes[code].Level == level).Sum(report.Total);
 
     /// <summary>

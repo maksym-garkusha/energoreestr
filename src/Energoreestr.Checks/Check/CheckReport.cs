@@ -11,8 +11,11 @@ public enum Level
     Info
 }
 
-/// <summary>Вид зауваження: рівень і текст для людини.</summary>
-public record CodeInfo(Level Level, string Text);
+/// <summary>Що рахує зауваження: увесь файл, рядки, клітинки чи колонки.</summary>
+public enum Unit { File, Row, Cell, Column }
+
+/// <summary>Вид зауваження: рівень, текст для людини, коротка назва, що рахуємо і місце в порядку показу.</summary>
+public record CodeInfo(Level Level, string Text, string? Title = null, Unit Unit = Unit.Row, int Order = 0);
 
 /// <summary>Одне зауваження до файлу.</summary>
 /// <param name="Line">Номер рядка у файлі; 0, якщо зауваження до всього файлу.</param>

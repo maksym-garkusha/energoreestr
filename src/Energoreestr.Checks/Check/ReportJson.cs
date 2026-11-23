@@ -37,6 +37,13 @@ public static class ReportJson
             ["fix"] = ReportGroups.Count(report, codes, Level.Fix),
             ["verify"] = ReportGroups.Count(report, codes, Level.Verify),
             ["info"] = ReportGroups.Count(report, codes, Level.Info),
+            // підсумок рахує види зауважень, а тут кількість окремих знахідок
+            ["findings"] = new JsonObject
+            {
+                ["fix"] = ReportGroups.Findings(report, codes, Level.Fix),
+                ["verify"] = ReportGroups.Findings(report, codes, Level.Verify),
+                ["info"] = ReportGroups.Findings(report, codes, Level.Info)
+            },
             ["personalDataRows"] = report.PersonalDataRows
         };
         root["groups"] = new JsonArray([.. ReportGroups.Build(report, codes).Select(Group)]);
@@ -69,6 +76,8 @@ public static class ReportJson
     {
         ["code"] = group.Code,
         ["level"] = group.Info.Level.ToString().ToLowerInvariant(),
+        ["title"] = group.Info.Title,
+        ["unit"] = group.Info.Unit.ToString().ToLowerInvariant(),
         ["text"] = group.Info.Text,
         ["count"] = group.Total,
         ["lines"] = Numbers(group.Findings.Where(f => f.Line > 0).Select(f => f.Line)),
