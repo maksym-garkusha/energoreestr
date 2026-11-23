@@ -111,6 +111,40 @@ public class CheckCommandTests
         }
     }
 
+    private static async Task<(int Code, string Output, string Error)> RunProgram(params string[] args)
+    {
+        var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "Energoreestr.dll"));
+        foreach (var arg in args) start.ArgumentList.Add(arg);
+        using var process = Process.Start(start)!;
+        string output = await process.StandardOutput.ReadToEndAsync();
+        string error = await process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        return (process.ExitCode, output, error);
+    }
+
+    [Fact]
+    public async Task Check_is_found_wherever_it_stands_and_in_any_case()
+    {
+        var (code, output, _) = await RunProgram("--json", "CHECK", Fixture.Path("check/clean.csv"));
+
+        Assert.Equal(0, code);
+        Assert.Contains("\"schema\": 1", output);
+    }
+
+    [Fact]
+    public async Task Unknown_command_prints_a_hint_instead_of_starting_the_server()
+    {
+        var (code, _, error) = await RunProgram(Fixture.Path("check/clean.csv"));
+
+        Assert.Equal(2, code);
+        Assert.Contains("Невідома команда", error);
+    }
+
     [Theory]
     [InlineData]
     [InlineData("--register", "wholesale")]

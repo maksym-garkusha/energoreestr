@@ -13,6 +13,8 @@ public class ChecksLibraryTests
 
         Assert.NotEmpty(references);
         Assert.All(references, name => Assert.StartsWith("System", name));
-        Assert.DoesNotContain(references, name => name.StartsWith("System.Net", StringComparison.Ordinal));
+        // і серед стандартної бібліотеки нічого, чим можна вийти назовні: мережа, інші процеси, канали, бази
+        string[] forbidden = ["System.Net", "System.Diagnostics.Process", "System.IO.Pipes", "System.Data"];
+        Assert.DoesNotContain(references, name => forbidden.Any(f => name.StartsWith(f, StringComparison.Ordinal)));
     }
 }

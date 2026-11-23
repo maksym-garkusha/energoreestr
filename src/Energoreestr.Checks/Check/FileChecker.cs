@@ -51,6 +51,7 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         if (records.Any(r => r.Fields.Length > MaxColumns)) return CheckReport.Unreadable(FileCheck.TooManyColumns);
 
         ReadHeader(records);
+        if (data.Count == 0) return CheckReport.Unreadable(FileCheck.HeaderOnly);
         DescribeColumns();
         foreach (var row in data) CheckRow(row);
         CheckColumns();
@@ -81,12 +82,12 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         {
             if (record.Line == unclosed && record == records[^1])
             {
-                Note(new(CheckCodes.UnclosedQuote, record.Line));
+                Note(new(CheckCodes.UnclosedQuote, record.Row));
                 broken.Add(record);
             }
             else if (record.Fields.Any(f => f.Length > MaxField))
             {
-                Note(new(CheckCodes.ValueTooLong, record.Line));
+                Note(new(CheckCodes.ValueTooLong, record.Row));
                 broken.Add(record);
             }
         }
@@ -97,7 +98,7 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
     {
         var first = records[0];
         width = first.Fields.Length;
-        headerLine = first.Line;
+        headerLine = first.Row;
         names = [.. first.Fields.Select(f => Cells.Clean(f))];
         data = records.Skip(1).ToList();
         hasHeader = true;
@@ -108,7 +109,7 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
             return;
 
         // назв колонок тоді не показуємо ніде, а перший рядок перевіряємо як дані
-        Note(new(CheckCodes.HeaderMissing, first.Line));
+        Note(new(CheckCodes.HeaderMissing, first.Row));
         hasHeader = false;
         names = new string[width];
         Array.Fill(names, "");
@@ -195,7 +196,8 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
     private static List<string> Values(IEnumerable<CsvRecord> rows, int column) =>
         rows.Where(r => column < r.Fields.Length)
             .Select(r => Cells.Clean(r.Fields[column]))
-            .Where(v => v.Length > 0 && !Cells.IsPlaceholder(v))
+            // заглушки й помилки формул не кажуть, що в колонці, тож у визначенні вигляду їх не рахуємо
+            .Where(v => v.Length > 0 && !Cells.IsPlaceholder(v) && !Cells.ExcelError().IsMatch(v))
             .ToList();
 
     private void DescribeColumns()
@@ -240,18 +242,18 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         if (broken.Contains(row)) return;
         if (IsSection(row))
         {
-            Note(new(CheckCodes.SectionRows, row.Line));
+            Note(new(CheckCodes.SectionRows, row.Row));
             // у такому рядку теж буває ім'я підприємця
             MarkPersonal(row, aligned: true);
             return;
         }
 
         bool aligned = IsAligned(row);
-        if (!aligned) Note(new(CheckCodes.UnquotedDelimiter, row.Line));
-        else if (row.Fields.Length < width) Note(new(CheckCodes.MissingFields, row.Line));
+        if (!aligned) Note(new(CheckCodes.UnquotedDelimiter, row.Row));
+        else if (row.Fields.Length < width) Note(new(CheckCodes.MissingFields, row.Row));
 
         if (!seen.Add(string.Join('\u001f', row.Fields.Select(f => Cells.Clean(f)))))
-            Note(new(CheckCodes.DuplicateRow, row.Line));
+            Note(new(CheckCodes.DuplicateRow, row.Row));
 
         bool personal = MarkPersonal(row, aligned);
         bool garbled = false;
@@ -259,7 +261,7 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         for (int c = 0; c < count; c++)
         {
             if (aligned && empty[c]) continue;
-            var cell = new Cell(row.Line, aligned ? c : null, row.Fields[c], personal);
+            var cell = new Cell(row.Row, aligned ? c : null, row.Fields[c], personal);
             if (aligned) CheckAlignedCell(cell, kinds[c]);
             else CheckLooseCell(cell);
             garbled |= CheckText(cell, aligned ? kinds[c] : ColumnKind.Unknown, garbled);
@@ -287,8 +289,8 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
             taxNumber ??= LooksLikeTaxNumber(value, aligned && c < width ? c : null) ? c : null;
         }
 
-        if (soleProprietor is int s) Note(new(CheckCodes.PersonalSoleProprietor, row.Line, aligned ? s : null));
-        if (taxNumber is int t) Note(new(CheckCodes.PersonalTaxNumber, row.Line, aligned ? t : null));
+        if (soleProprietor is int s) Note(new(CheckCodes.PersonalSoleProprietor, row.Row, aligned ? s : null));
+        if (taxNumber is int t) Note(new(CheckCodes.PersonalTaxNumber, row.Row, aligned ? t : null));
         bool personal = soleProprietor is not null || taxNumber is not null;
         if (personal) personalRows++;
         return personal;

@@ -17,7 +17,7 @@ public static class ReportText
         if (report.Problem is not null)
             return text.AppendLine(report.Problem).ToString();
 
-        if (report.File is { } file) WriteProfile(text, file, report.Rows);
+        if (report.File is { } file) WriteProfile(text, file, report.Rows, report.Findings.Any(f => f.Code == CheckCodes.SingleColumn));
         else text.AppendLine($"Рядків з даними: {report.Rows}.");
 
         text.AppendLine($"Поправити: {ReportGroups.Count(report, codes, Level.Fix)}, " +
@@ -40,9 +40,12 @@ public static class ReportText
         return text.ToString();
     }
 
-    private static void WriteProfile(StringBuilder text, FileProfile file, int rows)
+    private static void WriteProfile(StringBuilder text, FileProfile file, int rows, bool singleColumn)
     {
-        text.AppendLine($"Кодування: {EncodingName(file.Encoding)}. Знак між колонками: {DelimiterName(file.Delimiter)}.");
+        // коли колонка одна, знака між колонками немає, і кома тут була б вигадкою
+        text.AppendLine(singleColumn
+            ? $"Кодування: {EncodingName(file.Encoding)}."
+            : $"Кодування: {EncodingName(file.Encoding)}. Знак між колонками: {DelimiterName(file.Delimiter)}.");
         text.AppendLine(file.HasHeader
             ? $"Рядків з даними: {rows}, колонок: {file.Columns.Count}."
             : $"Рядків з даними: {rows}, колонок: {file.Columns.Count}, рядка з назвами колонок немає.");

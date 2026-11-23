@@ -3,7 +3,14 @@ using System.Text;
 namespace Energoreestr.Csv;
 
 /// <summary>Один запис CSV: поля та номер рядка у файлі, з якого він почався.</summary>
-public record CsvRecord(int Line, string[] Fields);
+public record CsvRecord(int Line, string[] Fields)
+{
+    /// <summary>
+    /// Номер рядка таблиці, як його покаже Excel: рахуються записи разом з порожніми рядками,
+    /// а перенесення всередині клітинки в лапках рахунку не збиває.
+    /// </summary>
+    public int Row { get; init; }
+}
 
 /// <summary>
 /// Читає CSV посимвольно. Лапки працюють як у RFC 4180: поле в лапках може містити
@@ -23,6 +30,7 @@ public static class CsvReader
 
         int line = 1;
         int recordLine = 1;
+        int row = 1;
         bool inQuotes = false;
         bool fieldStarted = false;   // чи вже щось прочитали в поточному полі
 
@@ -77,10 +85,11 @@ public static class CsvReader
 
                 // порожні рядки пропускаємо
                 if (fields.Count > 1 || fields[0].Length > 0)
-                    records.Add(new CsvRecord(recordLine, fields.ToArray()));
+                    records.Add(new CsvRecord(recordLine, fields.ToArray()) { Row = row });
                 fields.Clear();
 
                 line++;
+                row++;
                 recordLine = line;
             }
             else
@@ -96,7 +105,7 @@ public static class CsvReader
         if (field.Length > 0 || fields.Count > 0)
         {
             fields.Add(field.ToString());
-            records.Add(new CsvRecord(recordLine, fields.ToArray()));
+            records.Add(new CsvRecord(recordLine, fields.ToArray()) { Row = row });
         }
 
         return records;

@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
@@ -10,10 +11,23 @@ using Energoreestr.Report;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
-// перевірці файлу не потрібні ні база, ні вебсервер: виходимо раніше, ніж їх створити,
-// щоб команда нічого не записала на диск
-if (args is ["check", ..])
-    return await CheckCommand.RunAsync(args[1..], Console.Out, Console.Error);
+// Перевірці файлу не потрібні ні база, ні вебсервер: виходимо раніше, ніж їх створити,
+// щоб команда нічого не записала на диск. Слово check шукаємо серед усіх аргументів,
+// бо прапорці люди ставлять і перед ним
+int checkAt = Array.FindIndex(args, a => a.Equals("check", StringComparison.OrdinalIgnoreCase));
+if (checkAt >= 0)
+{
+    // інакше в консолі Windows кирилиця звіту перетвориться на знаки питання
+    Console.OutputEncoding = Encoding.UTF8;
+    return await CheckCommand.RunAsync([.. args[..checkAt], .. args[(checkAt + 1)..]], Console.Out, Console.Error);
+}
+
+// опечатка в назві команди не має мовчки запускати вебсервер
+if (args is [var command, ..] && !command.StartsWith('-') && command is not ("import" or "report" or "export"))
+{
+    Console.Error.WriteLine($"Невідома команда «{command}». Є check, import, report і export; без команди запускається API.");
+    return 2;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

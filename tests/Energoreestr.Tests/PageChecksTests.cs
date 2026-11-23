@@ -94,6 +94,7 @@ public class PageChecksTests
     [InlineData(new byte[] { 0x50, 0x4B, 0x03, 0x04 })]
     [InlineData(new byte[] { 0x41, 0x00, 0x42 })]
     [InlineData(new byte[] { 0xC0, 0x81, 0x82, 0x83, 0x84 })]
+    [InlineData(new byte[] { 0x61, 0x3B, 0x62, 0x0A })]
     public void Page_refuses_the_same_files_as_the_command(byte[] bytes)
     {
         var (json, _) = RunPage(bytes);

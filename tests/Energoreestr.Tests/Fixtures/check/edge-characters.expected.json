@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "file": {
+    "encoding": "utf-8-bom",
+    "delimiter": ";",
+    "hasHeader": true,
+    "columns": [
+      {
+        "index": 1,
+        "name": "Код ЄДРПОУ",
+        "kind": "edrpou",
+        "filled": 8
+      },
+      {
+        "index": 2,
+        "name": "Найменування",
+        "kind": "text",
+        "filled": 8
+      },
+      {
+        "index": 3,
+        "name": "Дата рішення",
+        "kind": "date",
+        "filled": 8
+      }
+    ]
+  },
+  "rows": 8,
+  "summary": {
+    "fix": 1,
+    "verify": 0,
+    "info": 4,
+    "personalDataRows": 0
+  },
+  "groups": [
+    {
+      "code": "date-invalid",
+      "level": "fix",
+      "text": "Такої дати не існує",
+      "count": 1,
+      "lines": [
+        8
+      ],
+      "columns": [
+        3
+      ],
+      "examples": [
+        {
+          "line": 8,
+          "column": 3,
+          "value": "0021-05-01"
+        }
+      ]
+    },
+    {
+      "code": "whitespace",
+      "level": "info",
+      "text": "Зайві пробіли на початку чи в кінці значення або два пробіли поспіль",
+      "count": 4,
+      "lines": [
+        8,
+        9
+      ],
+      "columns": [
+        1,
+        2
+      ],
+      "examples": []
+    }
+  ]
+}

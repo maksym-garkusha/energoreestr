@@ -4,14 +4,14 @@ namespace Energoreestr.Check;
 
 /// <param name="Text">null, якщо кодування визначити не вдалося.</param>
 /// <param name="Garbled">Чи схожий текст на двічі перекодований.</param>
-public record Decoded(string? Text, string Encoding, IReadOnlyList<Finding> Findings, bool Garbled);
+internal record Decoded(string? Text, string Encoding, IReadOnlyList<Finding> Findings, bool Garbled);
 
 /// <summary>
 /// Визначає кодування. Для файлів з України реально бувають три: UTF-8 з позначкою BOM
 /// чи без неї, Windows-1251 і UTF-16 (Excel, «текст Юнікод»). Інші не пробуємо:
 /// кожне зайве кодування дає хибні спрацювання на правильних файлах.
 /// </summary>
-public static class Decoding
+internal static class Decoding
 {
     private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, throwOnInvalidBytes: true);
     private static readonly Encoding Windows1251 = CodePagesEncodingProvider.Instance.GetEncoding(1251)!;
@@ -66,7 +66,7 @@ public static class Decoding
 /// Текст у UTF-8, який хтось прочитав як Windows-1251 і знову зберіг: «ТОВ» стає «РўРћР’».
 /// Кожна кирилична літера перетворюється на «Р» або «С» і знак з верхньої половини таблиці 1251.
 /// </summary>
-public static class Mojibake
+internal static class Mojibake
 {
     // Знаки, які в такому тексті стоять після «Р» чи «С». Українські літери І, Ї, Є, Ґ
     // і закривні лапки сюди не входять: «РІВНЕ» чи «СЕРВІС»» це звичайний текст.

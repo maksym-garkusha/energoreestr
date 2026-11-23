@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace Energoreestr.Check;
 
 /// <summary>Як виглядають окремі значення: коди, дати, числа, сліди Excel.</summary>
-public static partial class Cells
+internal static partial class Cells
 {
     // Пробіли й невидимі знаки, які обрізаємо по краях значення. Перелік явний, бо .NET і
     // браузер вважають пробілами трохи різне, а сторінка має рахувати так само, як команда
@@ -67,6 +67,8 @@ public static partial class Cells
 
     public static bool IsIbanValid(string compact)
     {
+        // контрольні цифри 00, 01 і 99 стандарт не видає взагалі
+        if (compact[2..4] is "00" or "01" or "99") return false;
         string moved = compact[4..] + compact[..4];
         int remainder = 0;
         foreach (char c in moved.ToUpperInvariant())
@@ -106,9 +108,9 @@ public static partial class Cells
 }
 
 /// <summary>Вигляд дати. Різні вигляди в одній колонці це зауваження.</summary>
-public enum DatePattern { Iso, IsoWithTime, Dmy, DmyWithTime }
+internal enum DatePattern { Iso, IsoWithTime, Dmy, DmyWithTime }
 
-public static partial class Dates
+internal static partial class Dates
 {
     [GeneratedRegex(@"^([0-9]{4}-[0-9]{2}-[0-9]{2})$")]
     private static partial Regex Iso();
@@ -142,7 +144,9 @@ public static partial class Dates
             _ => (DmyWithTime(), "dd.MM.yyyy")
         };
         var match = regex.Match(value);
-        if (!DateOnly.TryParseExact(match.Groups[1].Value, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+        // роки поза 1900-2100 у реєстрах означають описку; браузер до того ж читає рік 0021 як 1921
+        if (!DateOnly.TryParseExact(match.Groups[1].Value, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+            || date.Year is < 1900 or > 2100)
             return false;
         return match.Groups[2].Value is not { Length: > 0 } time
             || TimeOnly.TryParseExact(time, ["HH:mm", "HH:mm:ss"], CultureInfo.InvariantCulture, DateTimeStyles.None, out _);

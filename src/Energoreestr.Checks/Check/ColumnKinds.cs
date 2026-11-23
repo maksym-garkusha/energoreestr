@@ -5,7 +5,7 @@ namespace Energoreestr.Check;
 /// краще не впізнати колонку і нічого не сказати, ніж налякати зауваженнями до чисел,
 /// які лише випадково схожі на коди.
 /// </summary>
-public static class ColumnKinds
+internal static class ColumnKinds
 {
     // менше значень замало, щоб судити про колонку
     private const int MinValues = 5;

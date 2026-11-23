@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-dsNsZ5wturoVp8lxJOdeMsv6Kz92odKb0+ncoWIwFPo='; style-src 'sha256-t2s/JMHN2hlrxrXDh+QU2//kgLfb4dHjik2LLXwh+qM='; worker-src blob:; connect-src 'none'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-i/w+c3SnZhYUb92+SR0ha7UF/LoIl0GgaUI7upR8mio='; style-src 'sha256-t2s/JMHN2hlrxrXDh+QU2//kgLfb4dHjik2LLXwh+qM='; worker-src blob:; connect-src 'none'; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>Перевірка файлу перед публікацією</title>
 <meta name="description" content="Перевірте таблицю CSV перед викладенням у відкритий доступ: кодування, зсунуті колонки, коди ЄДРПОУ й EIC, сліди Excel, ознаки персональних даних. Файл лишається на вашому комп'ютері.">
@@ -204,6 +204,7 @@ const PROBLEMS = {
   notText: 'Це не текстовий файл CSV.',
   empty: 'Файл порожній.',
   encoding: 'Не вдалося визначити кодування файлу. Збережіть його як «CSV UTF-8» і перевірте ще раз.',
+  headerOnly: 'У файлі є лише рядок з назвами колонок, рядків з даними немає.',
   columns: 'У файлі понад 1000 колонок. Найімовірніше, знак між колонками визначено неправильно або це не таблиця.'
 };
 const MAX_FIELD = 100000;
@@ -225,7 +226,8 @@ function clean(value) {
 
 function readCsv(text, delimiter) {
   const records = [];
-  let fields = [], field = '', line = 1, recordLine = 1, inQuotes = false, started = false;
+  // row: номер рядка таблиці, як у Excel (з порожніми рядками, без перенесень у лапках)
+  let fields = [], field = '', line = 1, recordLine = 1, row = 1, inQuotes = false, started = false;
   let i = text.length > 0 && text[0] === '﻿' ? 1 : 0;
   for (; i < text.length; i++) {
     const c = text[i];
@@ -243,14 +245,15 @@ function readCsv(text, delimiter) {
     else if (c === '\n' || c === '\r') {
       if (c === '\r' && text[i + 1] === '\n') i++;
       fields.push(field); field = ''; started = false;
-      if (fields.length > 1 || fields[0].length > 0) records.push({ line: recordLine, fields });
+      if (fields.length > 1 || fields[0].length > 0) records.push({ line: recordLine, row, fields });
       fields = [];
       line++;
+      row++;
       recordLine = line;
     } else { field += c; started = true; }
   }
   const unclosed = inQuotes ? recordLine : null;
-  if (field.length > 0 || fields.length > 0) { fields.push(field); records.push({ line: recordLine, fields }); }
+  if (field.length > 0 || fields.length > 0) { fields.push(field); records.push({ line: recordLine, row, fields }); }
   return { records, unclosed };
 }
 
@@ -320,6 +323,7 @@ const edrpouShaped = v => (DIGITS.test(v) && v.length >= 5 && v.length <= 8) || 
 const excelDateSerial = v => v.length === 5 && DIGITS.test(v) && Number(v) >= 20000 && Number(v) <= 73050;
 
 function ibanValid(code) {
+  if (['00', '01', '99'].includes(code.slice(2, 4))) return false;
   const moved = (code.slice(4) + code.slice(0, 4)).toUpperCase();
   let remainder = 0;
   for (const c of moved) {
@@ -374,7 +378,8 @@ function realDate(v, pattern) {
   const parts = order === 'ymd' ? match[1].split('-').map(Number) : match[1].split('.').map(Number).reverse();
   const [y, m, d] = parts;
   const date = new Date(Date.UTC(y, m - 1, d));
-  if (y < 1 || date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return false;
+  // роки поза 1900-2100 вважаємо опискою, як у Dates.IsReal
+  if (y < 1900 || y > 2100 || date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return false;
   if (!match[2]) return true;
   const [h, min, s] = match[2].split(':').map(Number);
   return h <= 23 && min <= 59 && (s === undefined || s <= 59);
@@ -560,6 +565,7 @@ class Checker {
     if (records.length === 0) return unreadable(PROBLEMS.empty);
     if (records.some(r => r.fields.length > MAX_COLUMNS)) return unreadable(PROBLEMS.columns);
     this.readHeader(records);
+    if (this.data.length === 0) return unreadable(PROBLEMS.headerOnly);
     this.describeColumns();
     for (const row of this.data) this.checkRow(row);
     this.checkColumns();
@@ -576,10 +582,10 @@ class Checker {
     const { records, unclosed } = readCsv(this.text, this.delimiter);
     records.forEach((record, i) => {
       if (record.line === unclosed && i === records.length - 1) {
-        this.note(finding('unclosed-quote', record.line));
+        this.note(finding('unclosed-quote', record.row));
         this.broken.add(record);
       } else if (record.fields.some(f => f.length > MAX_FIELD)) {
-        this.note(finding('value-too-long', record.line));
+        this.note(finding('value-too-long', record.row));
         this.broken.add(record);
       }
     });
@@ -589,7 +595,7 @@ class Checker {
   readHeader(records) {
     const first = records[0];
     this.width = first.fields.length;
-    this.headerLine = first.line;
+    this.headerLine = first.row;
     this.names = first.fields.map(clean);
     this.data = records.slice(1);
     this.hasHeader = true;
@@ -597,7 +603,7 @@ class Checker {
     if (!this.firstRowLooksLikeData(first) && !this.headerLooksPersonal(first) && first.fields.every(f => f.length <= MAX_HEADER_CELL)
       && !(this.noTypedColumns() && this.firstRowLooksLikeTheRest(first))) return;
 
-    this.note(finding('header-missing', first.line));
+    this.note(finding('header-missing', first.row));
     this.hasHeader = false;
     this.names = new Array(this.width).fill('');
     this.data = records;
@@ -685,17 +691,17 @@ class Checker {
   checkRow(row) {
     if (this.broken.has(row)) return;
     if (this.isSection(row)) {
-      this.note(finding('section-rows', row.line));
+      this.note(finding('section-rows', row.row));
       this.markPersonal(row, true);
       return;
     }
 
     const aligned = this.isAligned(row);
-    if (!aligned) this.note(finding('unquoted-delimiter', row.line));
-    else if (row.fields.length < this.width) this.note(finding('missing-fields', row.line));
+    if (!aligned) this.note(finding('unquoted-delimiter', row.row));
+    else if (row.fields.length < this.width) this.note(finding('missing-fields', row.row));
 
     const key = row.fields.map(clean).join('\u001f');
-    if (this.seen.has(key)) this.note(finding('duplicate-row', row.line));
+    if (this.seen.has(key)) this.note(finding('duplicate-row', row.row));
     else this.seen.add(key);
 
     const personal = this.markPersonal(row, aligned);
@@ -703,7 +709,7 @@ class Checker {
     const count = aligned ? Math.min(row.fields.length, this.width) : row.fields.length;
     for (let c = 0; c < count; c++) {
       if (aligned && this.empty[c]) continue;
-      const cell = { line: row.line, column: aligned ? c : null, raw: row.fields[c], value: clean(row.fields[c]), personal };
+      const cell = { line: row.row, column: aligned ? c : null, raw: row.fields[c], value: clean(row.fields[c]), personal };
       if (aligned) this.checkAlignedCell(cell, this.kinds[c]);
       else this.checkLooseCell(cell);
       garbled = this.checkText(cell, aligned ? this.kinds[c] : 'unknown', garbled) || garbled;
@@ -722,8 +728,8 @@ class Checker {
       if (sole === null && namedAsSoleProprietor(value)) sole = c;
       if (tax === null && this.looksLikeTaxNumber(value, aligned && c < this.width ? c : null)) tax = c;
     }
-    if (sole !== null) this.note(finding('personal-sole-proprietor', row.line, aligned ? sole : null));
-    if (tax !== null) this.note(finding('personal-tax-number', row.line, aligned ? tax : null));
+    if (sole !== null) this.note(finding('personal-sole-proprietor', row.row, aligned ? sole : null));
+    if (tax !== null) this.note(finding('personal-tax-number', row.row, aligned ? tax : null));
     const personal = sole !== null || tax !== null;
     if (personal) this.personalRows++;
     return personal;
@@ -816,7 +822,7 @@ class Checker {
 }
 
 function valuesOf(rows, column) {
-  return rows.filter(r => column < r.fields.length).map(r => clean(r.fields[column])).filter(v => v.length > 0 && !isPlaceholder(v));
+  return rows.filter(r => column < r.fields.length).map(r => clean(r.fields[column])).filter(v => v.length > 0 && !isPlaceholder(v) && !EXCEL_ERROR.test(v));
 }
 
 const marks = v => (v.includes('@') ? '@' : '') + (v.includes(',') ? ',' : '') + (v.includes('.') ? '.' : '');
@@ -953,7 +959,10 @@ function reportText(report) {
   const out = [];
   const file = report.file;
   if (file) {
-    out.push(`Кодування: ${ENCODING_NAMES[file.encoding] || file.encoding}. Знак між колонками: ${DELIMITER_NAMES[file.delimiter] || `«${file.delimiter}»`}.`);
+    const single = report.findings.some(f => f.code === 'single-column');
+    out.push(single
+      ? `Кодування: ${ENCODING_NAMES[file.encoding] || file.encoding}.`
+      : `Кодування: ${ENCODING_NAMES[file.encoding] || file.encoding}. Знак між колонками: ${DELIMITER_NAMES[file.delimiter] || `«${file.delimiter}»`}.`);
     out.push(file.hasHeader
       ? `Рядків з даними: ${report.rows}, колонок: ${file.columns.length}.`
       : `Рядків з даними: ${report.rows}, колонок: ${file.columns.length}, рядка з назвами колонок немає.`);
@@ -1002,6 +1011,7 @@ function reportView(report) {
   });
   return {
     problem: null, rows: report.rows, file, personalDataRows: report.personalDataRows,
+    singleColumn: report.findings.some(f => f.code === 'single-column'),
     counts: { fix: countLevel(report, 'fix'), verify: countLevel(report, 'verify'), info: countLevel(report, 'info') },
     groups
   };
@@ -1011,8 +1021,9 @@ function reportView(report) {
 if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
   self.onmessage = event => {
     const bytes = new Uint8Array(event.data.buffer);
+    // рядки рахуємо і за \n, і за самотнім \r (старі файли з Mac)
     let lines = 0;
-    for (let i = 0; i < bytes.length; i++) if (bytes[i] === 10) lines++;
+    for (let i = 0; i < bytes.length; i++) if (bytes[i] === 10 || (bytes[i] === 13 && bytes[i + 1] !== 10)) lines++;
     if (lines > event.data.maxLines) {
       const problem = `У файлі понад ${event.data.maxLines.toLocaleString('uk')} рядків. Такий файл зручніше перевірити командою dotnet run -- check.`;
       self.postMessage({ view: { problem }, text: problem + '\n' });
@@ -1133,7 +1144,8 @@ function show(file, report) {
   const counts = report.counts;
   const card = el('section', 'card',
     el('p', 'file', `${file.name}, ${size(file.size)}`),
-    el('p', 'meta', `Кодування: ${ENCODINGS[report.file.encoding] || report.file.encoding}. Знак між колонками: ${DELIMITERS[report.file.delimiter] || report.file.delimiter}. ` +
+    el('p', 'meta', `Кодування: ${ENCODINGS[report.file.encoding] || report.file.encoding}. ` +
+      (report.singleColumn ? '' : `Знак між колонками: ${DELIMITERS[report.file.delimiter] || report.file.delimiter}. `) +
       `Рядків з даними: ${report.rows}, колонок: ${report.file.columns.length}.` + (report.file.hasHeader ? '' : ' Рядка з назвами колонок немає.')),
     el('div', 'counters', ...SECTIONS.map(([level, title]) => el('p', `counter ${level}${counts[level] > 0 ? ' found' : ''}`, el('b', '', String(counts[level])), ' ', title.toLowerCase()))));
   const parts = [card];

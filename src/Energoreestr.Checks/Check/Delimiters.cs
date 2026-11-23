@@ -3,7 +3,7 @@ using Energoreestr.Csv;
 namespace Energoreestr.Check;
 
 /// <summary>Яким знаком розділено колонки.</summary>
-public static class Delimiters
+internal static class Delimiters
 {
     // порядок важить лише за однакового результату
     private static readonly char[] Candidates = [';', ',', '\t', '|'];

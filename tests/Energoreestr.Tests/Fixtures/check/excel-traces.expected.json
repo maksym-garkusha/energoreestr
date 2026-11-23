@@ -32,8 +32,8 @@
       {
         "index": 5,
         "name": "Сума, грн",
-        "kind": "text",
-        "filled": 8
+        "kind": "number",
+        "filled": 7
       }
     ]
   },

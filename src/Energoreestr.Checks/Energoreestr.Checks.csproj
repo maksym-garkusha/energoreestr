@@ -8,4 +8,8 @@
     <RootNamespace>Energoreestr</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Energoreestr.Tests" />
+  </ItemGroup>
+
 </Project>

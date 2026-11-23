@@ -73,8 +73,22 @@ public class PageCspTests
     {
         string html = Read("check/index.html");
 
-        foreach (var unsafeApi in new[] { "innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function" })
+        string[] markup = ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(", "new Function",
+            "setHTMLUnsafe", "createContextualFragment", "DOMParser", "srcdoc"];
+        foreach (var unsafeApi in markup)
             Assert.DoesNotContain(unsafeApi, html);
+    }
+
+    // CSP і так не пустить, але код сторінки не має навіть пробувати щось надіслати чи кудись піти
+    [Fact]
+    public void Check_page_code_does_not_try_to_send_or_navigate()
+    {
+        string html = Read("check/index.html");
+
+        string[] network = ["fetch(", "XMLHttpRequest", "WebSocket", "EventSource", "sendBeacon", "importScripts", "window.open"];
+        foreach (var api in network)
+            Assert.DoesNotContain(api, html);
+        Assert.DoesNotMatch(new Regex(@"location(\.\w+)?\s*="), html);
     }
 
     private static string Policy(string html)

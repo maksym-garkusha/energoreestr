@@ -170,6 +170,56 @@ public class FileCheckTests
         Assert.Equal([CheckCodes.DateInvalid, CheckCodes.DateMixedFormat], Codes(report));
     }
 
+    [Theory]
+    [InlineData("0021-05-01")]
+    [InlineData("2101-01-01")]
+    [InlineData("1899-12-31")]
+    public void Years_outside_1900_to_2100_are_not_real_dates(string date)
+    {
+        var report = Check($"Найменування;Дата\nА;2025-01-01\nБ;{date}\nВ;2025-01-03\nГ;2025-01-04\nҐ;2025-01-05\nД;2025-01-06\n");
+
+        Assert.Equal([CheckCodes.DateInvalid], Codes(report));
+    }
+
+    [Fact]
+    public void Iban_check_digits_00_01_and_99_are_never_valid()
+    {
+        // 01 і 98 дають ту саму остачу за модулем 97, але стандарт видає лише 02-98
+        Assert.False(Cells.IsIbanValid("UA01" + "3052990000026007233566001"));
+        Assert.False(Cells.IsIbanValid("UA00" + "3052990000026007233566001"));
+    }
+
+    [Fact]
+    public void Formula_errors_do_not_decide_what_a_column_holds()
+    {
+        var report = Check("Найменування;Сума\nА;10.50\nБ;#N/A\nВ;#REF!\nГ;12.00\nҐ;13.25\nД;14.00\nЕ;15.75\n");
+
+        Assert.Equal(ColumnKind.Number, report.File!.Columns[1].Kind);
+    }
+
+    [Fact]
+    public void File_with_only_column_names_is_reported_as_having_no_rows()
+    {
+        Assert.Equal(FileCheck.HeaderOnly, Check("Номер;Код ЄДРПОУ;Найменування\n").Problem);
+    }
+
+    [Fact]
+    public void Row_numbers_follow_the_table_not_the_lines_of_the_file()
+    {
+        // перенесення в клітинці займає зайвий рядок файлу, але рядок таблиці один
+        var report = Check(Header + "1;35209058;\"ТОВ\nЗРАЗОК\"\n2;2249063;ТОВ\n" + Rows);
+
+        Assert.Equal(3, Assert.Single(report.Findings, f => f.Code == CheckCodes.EdrpouLeadingZeros).Line);
+    }
+
+    [Fact]
+    public void One_column_file_does_not_claim_a_separator()
+    {
+        var text = ReportText.Write(Check("назва\nперша\nдруга\n"), CheckCodes.All);
+
+        Assert.DoesNotContain("Знак між колонками", text);
+    }
+
     [Fact]
     public void Excel_day_number_counts_as_a_date_only_in_a_column_named_as_date()
     {

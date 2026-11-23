@@ -13,7 +13,7 @@ public static class CheckCommand
 {
     public const string Usage = "Використання: check [--json] [--strict] [--register набір] файл.csv";
 
-    public static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error, CancellationToken ct = default)
+    public static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error)
     {
         if (!TryParse(args, out var options))
         {
@@ -35,7 +35,7 @@ public static class CheckCommand
 
         try
         {
-            var content = await File.ReadAllBytesAsync(options.Path, ct);
+            var content = await File.ReadAllBytesAsync(options.Path);
             var (report, codes) = options.Register is { } def
                 ? (RegisterCheck.Run(def, content), RegisterCheck.Codes)
                 : (FileCheck.Run(content), CheckCodes.All);
@@ -48,7 +48,7 @@ public static class CheckCommand
             await error.WriteLineAsync("Не вдалося прочитати файл: немає доступу або його відкрито в іншій програмі.");
             return 2;
         }
-        catch (Exception e) when (e is not OperationCanceledException)
+        catch (Exception)
         {
             // Текст винятку не друкуємо: у ньому буває шматок файлу, а стек людині нічого не скаже
             await error.WriteLineAsync("Не вдалося перевірити файл через помилку в програмі. Якщо можете, повідомте про це в issues репозиторію.");
