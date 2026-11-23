@@ -63,7 +63,7 @@
 
 У 5 рядках із цих 40 однаково добре підходило кілька варіантів (незрозуміло, де закінчується вулиця і починається місто в іноземній адресі). Вони позначені в звіті як неоднозначні, решта полів у них розкладена правильно.
 
-Код: [RowRepair.cs](src/Energoreestr/Csv/RowRepair.cs), перевірки колонок у [WholesaleParser.cs](src/Energoreestr/Registers/WholesaleParser.cs).
+Код: [RowRepair.cs](src/Energoreestr.Checks/Csv/RowRepair.cs), перевірки колонок у [WholesaleParser.cs](src/Energoreestr/Registers/WholesaleParser.cs).
 
 ## Запуск
 
@@ -109,11 +109,15 @@ dotnet test                                 # з кореня репозитор
 ## Як влаштовано
 
 ```
-src/Energoreestr/
+src/Energoreestr.Checks/   код без бази й мережі, посилається лише на стандартну бібліотеку
   Csv/         читання CSV і відновлення зсунутих колонок
   Codes/       контрольні розряди ЄДРПОУ та EIC
   Text/        нормалізація назв для пошуку
+  Check/       перевірка файлу командою check і звіт про неї
+  Registers/   як упізнати запис про фізичну особу-підприємця
+src/Energoreestr/
   Registers/   розбір кожного реєстру і перелік видів зауважень
+  Commands/    команда check
   Import/      клієнт data.gov.ua, імпорт, порівняння з попереднім файлом
   Data/        модель бази (EF Core, SQLite) і міграції
   Api/         ендпоінти

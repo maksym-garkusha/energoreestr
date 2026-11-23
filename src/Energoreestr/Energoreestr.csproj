@@ -17,4 +17,8 @@
     <PackageReference Include="Scalar.AspNetCore" Version="3.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Energoreestr.Checks\Energoreestr.Checks.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Energoreestr.Checks/Energoreestr.Checks.csproj" />
     <Project Path="src/Energoreestr/Energoreestr.csproj" />
   </Folder>
   <Folder Name="/tests/">

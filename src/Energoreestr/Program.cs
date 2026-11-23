@@ -2,12 +2,18 @@ using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Energoreestr.Api;
+using Energoreestr.Commands;
 using Energoreestr.Data;
 using Energoreestr.Export;
 using Energoreestr.Import;
 using Energoreestr.Report;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
+
+// перевірці файлу не потрібні ні база, ні вебсервер: виходимо раніше, ніж їх створити,
+// щоб команда нічого не записала на диск
+if (args is ["check", ..])
+    return await CheckCommand.RunAsync(args[1..], Console.Out, Console.Error);
 
 var builder = WebApplication.CreateBuilder(args);
 
