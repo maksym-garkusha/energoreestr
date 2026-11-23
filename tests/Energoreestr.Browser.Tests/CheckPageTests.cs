@@ -244,8 +244,8 @@ public class CheckPageTests(BrowserFixture browser) : IClassFixture<BrowserFixtu
     {
         var (context, page) = await OpenAsync();
 
-        await page.Locator("#pick").FocusAsync();
-        var chooser = await page.RunAndWaitForFileChooserAsync(() => page.Keyboard.PressAsync("Enter"));
+        // фокус і натискання однією дією: між ними сторінка ще могла дорендеритися
+        var chooser = await page.RunAndWaitForFileChooserAsync(() => page.Locator("#pick").PressAsync("Enter"));
         await chooser.SetFilesAsync(BrowserFixture.Fixture("check/clean.csv"));
 
         await Assertions.Expect(page.Locator("#status")).ToContainTextAsync("зауважень немає");
