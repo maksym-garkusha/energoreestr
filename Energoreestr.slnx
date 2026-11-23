@@ -4,6 +4,7 @@
     <Project Path="src/Energoreestr/Energoreestr.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Energoreestr.Browser.Tests/Energoreestr.Browser.Tests.csproj" />
     <Project Path="tests/Energoreestr.Tests/Energoreestr.Tests.csproj" />
   </Folder>
 </Solution>

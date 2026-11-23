@@ -25,7 +25,12 @@ jobs:
           dotnet-version: '11.0.x'
       - run: dotnet build -c Release
       - run: dotnet format --verify-no-changes --no-restore
-      - run: dotnet test -c Release --no-build
+      - run: dotnet test tests/Energoreestr.Tests -c Release --no-build
+      # сторінку перевірки файлу відкриваємо в Chrome, який уже є на runner'і: браузер не качаємо
+      - name: Browser tests
+        run: |
+          google-chrome --version
+          dotnet test tests/Energoreestr.Browser.Tests -c Release --no-build
       # будь-яка відома вразливість у пакетах, разом із транзитивними, валить збірку
       - name: Check packages for known vulnerabilities
         run: |

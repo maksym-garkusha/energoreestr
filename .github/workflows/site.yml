@@ -32,8 +32,9 @@ jobs:
         with:
           dotnet-version: '11.0.x'
       # серед тестів є звірка хешів CSP: зі старим хешем сторінка не запустила б свій скрипт
+      # тести в браузері йдуть у tests.yml, тут досить звірки хешів CSP і правил перевірки
       - name: Test
-        run: dotnet test -c Release
+        run: dotnet test tests/Energoreestr.Tests -c Release
       - name: Import registers
         working-directory: src/Energoreestr
         run: dotnet run -c Release -- import
@@ -75,5 +76,6 @@ jobs:
           subject-path: |
             ${{ runner.temp }}/site/data.json
             ${{ runner.temp }}/site/index.html
+            ${{ runner.temp }}/site/check/index.html
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
