@@ -52,6 +52,12 @@ public static class CheckCodes
     public const string PersonalTaxNumber = "personal-tax-number";
     public const string PersonalSoleProprietor = "personal-sole-proprietor";
 
+    /// <summary>
+    /// Зауваження, яких буває багато і які не потребують переліку рядків: у тексті звіту
+    /// вони зведені до кількості клітинок у кожній колонці, номери рядків лишаються в JSON.
+    /// </summary>
+    public static readonly IReadOnlySet<string> CountedByColumn = new HashSet<string> { Whitespace };
+
     public static readonly IReadOnlyDictionary<string, CodeInfo> All = new Dictionary<string, CodeInfo>
     {
         [Encoding1251] = new(Level.Fix, "Файл збережено в старому кодуванні Windows-1251: збережіть його в UTF-8, щоб літери однаково читалися в усіх програмах"),

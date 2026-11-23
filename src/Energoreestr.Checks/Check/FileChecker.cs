@@ -332,16 +332,36 @@ internal sealed class FileChecker(Decoded decoded, DateOnly today)
         return true;
     }
 
-    // Самого слова не показуємо, бо це текст з файлу: лише яке воно за ліком і які в ньому латинські літери
+    // Самого слова не показуємо, бо це текст з файлу: лише яке воно за ліком і які в ньому латинські літери.
+    // Словом вважаємо будь-який ряд літер, тож «<b>жирний</b>» це три слова, а не одне змішане
     private static string? MixedWords(string value)
     {
-        var words = value.Split(Names.WordSeparators, StringSplitOptions.RemoveEmptyEntries);
-        var mixed = Enumerable.Range(0, words.Length).Where(i => Names.MixedAlphabetWords(words[i]).Count > 0).ToList();
+        var words = Words(value);
+        var mixed = Enumerable.Range(0, words.Count)
+            .Where(i => words[i].Any(c => c is >= 'Ѐ' and <= 'ӿ') && words[i].Any(Names.IsLatin))
+            .ToList();
         if (mixed.Count == 0) return null;
 
         var latin = mixed.SelectMany(i => words[i].Where(Names.IsLatin)).Distinct().Order();
         string which = mixed.Count == 1 ? "слово" : "слова";
         return $"{which} {string.Join(", ", mixed.Select(i => i + 1))}, латинські літери: {string.Join(" ", latin)}";
+    }
+
+    private static List<string> Words(string value)
+    {
+        var words = new List<string>();
+        int start = -1;
+        for (int i = 0; i <= value.Length; i++)
+        {
+            bool letter = i < value.Length && char.IsLetter(value[i]);
+            if (letter && start < 0) start = i;
+            if (!letter && start >= 0)
+            {
+                words.Add(value[start..i]);
+                start = -1;
+            }
+        }
+        return words;
     }
 
     private void CheckColumns()

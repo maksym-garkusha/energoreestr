@@ -58,6 +58,12 @@ public static class ReportText
             text.AppendLine($"    {(columns.Count == 1 ? "колонка" : "колонки")} {ReportGroups.Ranges(columns)}");
 
         var lines = group.Findings.Where(f => f.Line > 0).ToList();
+        if (CheckCodes.CountedByColumn.Contains(group.Code))
+        {
+            foreach (var column in lines.GroupBy(f => f.Column).OrderBy(g => g.Key))
+                text.AppendLine($"    {(column.Key is int c ? ColumnName(c, file) : "колонку не визначено")}: {Cells(column.Count())}");
+            return;
+        }
         foreach (var finding in lines.Take(Examples))
             text.AppendLine($"    {Describe(finding, file)}");
         if (lines.Count > Examples)
@@ -67,15 +73,27 @@ public static class ReportText
     public static string Describe(Finding finding, FileProfile? file)
     {
         var where = new StringBuilder($"рядок {finding.Line}");
-        if (finding.Column is int column)
-        {
-            where.Append($", колонка {column + 1}");
-            string? name = file?.HasHeader == true && column < file.Columns.Count ? file.Columns[column].Name : null;
-            if (!string.IsNullOrWhiteSpace(name)) where.Append($" «{OneLine(name)}»");
-        }
+        if (finding.Column is int column) where.Append(", ").Append(ColumnName(column, file));
         if (finding.Value is not null) where.Append($": {OneLine(finding.Value)}");
         if (finding.Note is not null) where.Append($" ({finding.Note})");
         return where.ToString();
+    }
+
+    private static string ColumnName(int column, FileProfile? file)
+    {
+        string? name = file?.HasHeader == true && column < file.Columns.Count ? file.Columns[column].Name : null;
+        return string.IsNullOrWhiteSpace(name) ? $"колонка {column + 1}" : $"колонка {column + 1} «{OneLine(name)}»";
+    }
+
+    // 1 клітинка, 2 клітинки, 5 клітинок, 11 клітинок, 21 клітинка
+    private static string Cells(int count)
+    {
+        int lastTwo = count % 100, last = count % 10;
+        string word = lastTwo is >= 11 and <= 14 ? "клітинок"
+            : last == 1 ? "клітинка"
+            : last is >= 2 and <= 4 ? "клітинки"
+            : "клітинок";
+        return $"{count} {word}";
     }
 
     public static string EncodingName(string encoding) => encoding switch

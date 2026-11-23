@@ -16,12 +16,14 @@ public class CheckGoldenTests
             .Select(f => Path.GetFileName(f).Replace(".expected.json", ""))
             .Order()];
 
+    public static string CsvFor(string name) =>
+        File.Exists(Fixture.Path($"check/{name}.csv")) ? $"check/{name}.csv" : $"{name}.csv";
+
     [Theory]
     [MemberData(nameof(Fixtures))]
     public void Report_matches_the_expected_file(string name)
     {
-        string csv = File.Exists(Fixture.Path($"check/{name}.csv")) ? $"check/{name}.csv" : $"{name}.csv";
-        var report = FileCheck.Run(Fixture.Bytes(csv), Today);
+        var report = FileCheck.Run(Fixture.Bytes(CsvFor(name)), Today);
 
         string expected = Fixture.Text($"check/{name}.expected.json").ReplaceLineEndings("\n").TrimEnd();
         string actual = ReportJson.Write(report, CheckCodes.All).ReplaceLineEndings("\n").TrimEnd();

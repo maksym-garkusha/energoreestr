@@ -33,30 +33,10 @@
   },
   "rows": 6,
   "summary": {
-    "fix": 1,
+    "fix": 0,
     "verify": 0,
     "info": 0,
     "personalDataRows": 0
   },
-  "groups": [
-    {
-      "code": "mixed-alphabet",
-      "level": "fix",
-      "text": "В одному слові змішано українські й латинські літери: на око цього не видно, але пошук такий запис не знайде",
-      "count": 1,
-      "lines": [
-        6
-      ],
-      "columns": [
-        2
-      ],
-      "examples": [
-        {
-          "line": 6,
-          "column": 2,
-          "note": "слово 1, латинські літери: b"
-        }
-      ]
-    }
-  ]
+  "groups": []
 }
